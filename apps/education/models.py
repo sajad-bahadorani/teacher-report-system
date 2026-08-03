@@ -56,5 +56,6 @@ class TeacherAssignment(models.Model):
         if self.end_date and self.end_date < self.start_date:
             raise ValidationError({"end_date": "End date cannot be before start date."})
         
-        def __str__(self):
-            return f"{self.teacher.full_name} - {self.classroom}"
+    
+    def __str__(self):
+        return f"{self.teacher.full_name} - {self.classroom}"
