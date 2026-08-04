@@ -253,3 +253,6 @@ staticfiles/
 
 # Media
 media/
+
+*.pyc
+db.sqlite3
