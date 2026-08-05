@@ -11,12 +11,15 @@ class User(AbstractUser):
         EDUCATION_OFFICER = "education", "Education Officer"
         FINANCE_OFFICER = "finance", "Finance Officer"
         
-    full_name = models.CharField(max_length=250)
-    phone = models.CharField(max_length=11, unique=True)
+    phone_number = models.CharField(max_length=11, unique=True)
     emergency_phone = models.CharField(max_length=11)
     role = models.CharField(max_length=30, choices=Role.choices)
     
-    def __str__(self):
-        return f"{self.full_name} - {self.role}"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
     
 
+    def __str__(self):
+        return f"{self.full_name} - {self.role}"
