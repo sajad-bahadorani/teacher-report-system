@@ -16,12 +16,12 @@ class Term(models.Model):
         NORMAL = "normal", "Normal"
         SUMMER = "summer", "Summer"
         
-    start = models.DateField()
-    end = models.DateField()
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
     term_type = models.CharField(max_length=10, choices=TermType.choices)
     
     def clean(self):
-        if self.end < self.start:
+        if self.end_date < self.start_date:
             raise ValidationError({"end": "Term end date cannot be before start date."})
         
     def __str__(self):
@@ -50,7 +50,7 @@ class TeacherAssignment(models.Model):
     classroom = models.ForeignKey(Classroom, on_delete=models.PROTECT, related_name="teacher_assignments")
     
     start_date = models.DateField()
-    end_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
     
     def clean(self):
         if self.end_date and self.end_date < self.start_date:
