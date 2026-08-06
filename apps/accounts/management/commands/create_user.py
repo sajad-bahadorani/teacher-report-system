@@ -1,35 +1,41 @@
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
+User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Create a new user"
+    help = "Create a new user with a specific role"
 
     def add_arguments(self, parser):
-        parser.add_argument("--role",choices=["teacher", "education", "finance"], required=True)
+        parser.add_argument("--username", required=True)
+        parser.add_argument("--password", required=True)
+        parser.add_argument("--role", required=True)
+        parser.add_argument("--first_name", default="")
+        parser.add_argument("--last_name", default="")
+        parser.add_argument("--phone_number", required=True)
+        parser.add_argument("--emergency_phone", required=True)
 
     def handle(self, *args, **options):
-        User = get_user_model()
-        
 
-        username = input("Username: ")
-        password = input("Password: ")
-        first_name = input("First name: ")
-        last_name = input("Last name: ")
-        phone_number = input("Phone number: ")
-        emergency_phone = input("Emergency phone: ")
+        if options["role"] not in [choice[0] for choice in User.Role.choices]:
+            raise CommandError("Invalid role.")
 
-        User.objects.create_user(
-            username=username,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            emergency_phone=emergency_phone,
+        if User.objects.filter(username=options["username"]).exists():
+            raise CommandError("Username already exists.")
+
+        user = User.objects.create_user(
+            username=options["username"],
+            password=options["password"],
             role=options["role"],
+            first_name=options["first_name"],
+            last_name=options["last_name"],
+            phone_number=options["phone_number"],
+            emergency_phone=options["emergency_phone"],
         )
 
         self.stdout.write(
-            self.style.SUCCESS("User created successfully.")
+            self.style.SUCCESS(
+                f"User '{user.username}' created successfully."
+            )
         )
