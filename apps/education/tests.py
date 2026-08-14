@@ -1098,3 +1098,49 @@ class TeacherAssignmentAPITest(APITestCase):
             ).count(),
             1,
         )
+
+    def test_update_teacher_assignment_cannot_create_overlap(self):
+        assignment1 = TeacherAssignment.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        teacher2 = User.objects.create_user(
+            username="teacher_update_overlap",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09150000009",
+            emergency_phone="09150000010",
+        )
+
+        assignment2 = TeacherAssignment.objects.create(
+            teacher=teacher2,
+            classroom=self.classroom,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        response = self.client.patch(
+            reverse(
+                "teacher-assignment-update",
+                kwargs={"pk": assignment2.pk},
+            ),
+            {
+                "start_date": "2026-01-15",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        assignment2.refresh_from_db()
+
+        self.assertEqual(
+            assignment2.start_date,
+            date(2026, 2, 1),
+        )
