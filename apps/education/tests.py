@@ -329,3 +329,28 @@ class TeacherAssignmentTest(TestCase):
             serializer.data["classroom"],
             self.classroom.id
         )
+
+    def test_teacher_assignment_serializer_rejects_non_teacher(self):
+        data = {
+            "teacher": self.education_officer.id,
+            "classroom": self.classroom.id,
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+        }
+
+        serializer = TeacherAssignmentSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+
+
+    def test_teacher_assignment_serializer_rejects_end_date_before_start_date(self):
+        data = {
+            "teacher": self.teacher1.id,
+            "classroom": self.classroom.id,
+            "start_date": "2026-02-01",
+            "end_date": "2026-01-01",
+        }
+
+        serializer = TeacherAssignmentSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
