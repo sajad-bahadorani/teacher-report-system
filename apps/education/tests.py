@@ -2,6 +2,10 @@ from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
+
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
 
@@ -454,3 +458,39 @@ class TeacherAssignmentTest(TestCase):
         )
 
         self.assertFalse(serializer.is_valid())
+
+
+class SchoolAPITest(APITestCase):
+
+    def setUp(self):
+        self.education_officer = User.objects.create_user(
+            username="education1",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09120000001",
+            emergency_phone="09120000002",
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+    def test_education_officer_can_create_school(self):
+        data = {
+            "name": "Maktab School"
+        }
+
+        response = self.client.post(
+            reverse("school-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertTrue(
+            School.objects.filter(name="Maktab School").exists()
+        )
