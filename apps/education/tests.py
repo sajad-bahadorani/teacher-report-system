@@ -494,3 +494,21 @@ class SchoolAPITest(APITestCase):
         self.assertTrue(
             School.objects.filter(name="Maktab School").exists()
         )
+
+    def test_education_officer_can_list_schools(self):
+        School.objects.create(name="School 1")
+        School.objects.create(name="School 2")
+
+        response = self.client.get(
+            reverse("school-list-create")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
