@@ -2,11 +2,12 @@ from rest_framework import generics
 
 from apps.accounts.permissions import IsEducationOfficer
 
-from .models import School, Term, Classroom
+from .models import School, Term, Classroom, TeacherAssignment
 from .serializers import (
     SchoolSerializer,
     TermSerializer,
     ClassroomSerializer,
+    TeacherAssignmentSerializer
 )
 
 
@@ -43,4 +44,16 @@ class ClassroomListCreateView(generics.ListCreateAPIView):
 class ClassroomUpdateView(generics.UpdateAPIView):
     queryset = Classroom.objects.all()
     serializer_class = ClassroomSerializer
+    permission_classes = [IsEducationOfficer]
+
+
+class TeacherAssignmentListCreateView(generics.ListCreateAPIView):
+    queryset = TeacherAssignment.objects.all()
+    serializer_class = TeacherAssignmentSerializer
+    permission_classes = [IsEducationOfficer]
+
+
+class TeacherAssignmentUpdateView(generics.UpdateAPIView):
+    queryset = TeacherAssignment.objects.all()
+    serializer_class = TeacherAssignmentSerializer
     permission_classes = [IsEducationOfficer]

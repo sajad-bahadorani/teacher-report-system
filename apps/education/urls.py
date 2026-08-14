@@ -7,6 +7,8 @@ from .views import (
     TermUpdateView,
     ClassroomListCreateView,
     ClassroomUpdateView,
+    TeacherAssignmentListCreateView,
+    TeacherAssignmentUpdateView,
 )
 
 
@@ -41,5 +43,15 @@ urlpatterns = [
         "classrooms/<int:pk>/",
         ClassroomUpdateView.as_view(),
         name="classroom-update",
+    ),
+    path(
+        "teacher-assignments/",
+        TeacherAssignmentListCreateView.as_view(),
+        name="teacher-assignment-list-create",
+    ),
+    path(
+        "teacher-assignments/<int:pk>/",
+        TeacherAssignmentUpdateView.as_view(),
+        name="teacher-assignment-update",
     ),
 ]

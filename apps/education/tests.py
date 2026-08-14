@@ -945,3 +945,69 @@ class ClassroomAPITest(APITestCase):
             classroom.session_duration,
             120,
         )
+
+
+class TeacherAssignmentAPITest(APITestCase):
+
+    def setUp(self):
+        self.education_officer = User.objects.create_user(
+            username="education_assignment",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09150000001",
+            emergency_phone="09150000002",
+        )
+
+        self.teacher = User.objects.create_user(
+            username="teacher_assignment",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09150000003",
+            emergency_phone="09150000004",
+        )
+
+        self.school = School.objects.create(
+            name="Sample School"
+        )
+
+        self.term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        self.classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=90,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+    def test_education_officer_can_create_teacher_assignment(self):
+        data = {
+            "teacher": self.teacher.id,
+            "classroom": self.classroom.id,
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+        }
+
+        response = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertTrue(
+            TeacherAssignment.objects.filter(
+                teacher=self.teacher,
+                classroom=self.classroom,
+            ).exists()
+        )
