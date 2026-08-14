@@ -379,3 +379,51 @@ class TeacherAssignmentTest(TestCase):
         serializer = TeacherAssignmentSerializer(data=data)
 
         self.assertFalse(serializer.is_valid())
+
+    def test_teacher_assignment_serializer_rejects_overlap(self):
+        TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        data = {
+            "teacher": self.teacher2.id,
+            "classroom": self.classroom.id,
+            "start_date": "2026-01-15",
+            "end_date": "2026-02-15",
+        }
+
+        serializer = TeacherAssignmentSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
+
+    def test_teacher_assignment_serializer_update_does_not_overlap_with_itself(self):
+        assignment = TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        data = {
+            "teacher": self.teacher1.id,
+            "classroom": self.classroom.id,
+            "start_date": "2026-01-01",
+            "end_date": "2026-02-15",
+        }
+
+        serializer = TeacherAssignmentSerializer(
+            assignment,
+            data=data,
+        )
+
+        self.assertTrue(serializer.is_valid())
+
+        updated_assignment = serializer.save()
+
+        self.assertEqual(
+            updated_assignment.end_date,
+            date(2026, 2, 15)
+        )
