@@ -1059,3 +1059,42 @@ class TeacherAssignmentAPITest(APITestCase):
             ).count(),
             2,
         )
+
+    def test_teacher_assignment_cannot_create_overlap(self):
+        TeacherAssignment.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        teacher2 = User.objects.create_user(
+            username="teacher_overlap",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09150000007",
+            emergency_phone="09150000008",
+        )
+
+        response = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": teacher2.id,
+                "classroom": self.classroom.id,
+                "start_date": "2026-01-15",
+                "end_date": "2026-02-15",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertEqual(
+            TeacherAssignment.objects.filter(
+                classroom=self.classroom
+            ).count(),
+            1,
+        )
