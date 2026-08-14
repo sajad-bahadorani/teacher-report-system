@@ -986,6 +986,14 @@ class TeacherAssignmentAPITest(APITestCase):
             user=self.education_officer
         )
 
+        self.finance_officer = User.objects.create_user(
+            username="finance_assignment",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09150000011",
+            emergency_phone="09150000012",
+        )
+
     def test_education_officer_can_create_teacher_assignment(self):
         data = {
             "teacher": self.teacher.id,
@@ -1143,4 +1151,43 @@ class TeacherAssignmentAPITest(APITestCase):
         self.assertEqual(
             assignment2.start_date,
             date(2026, 2, 1),
+        )
+
+    def test_teacher_cannot_create_teacher_assignment(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": self.teacher.id,
+                "classroom": self.classroom.id,
+                "start_date": "2026-01-01",
+                "end_date": "2026-01-31",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+
+    def test_finance_officer_cannot_create_teacher_assignment(self):
+        self.client.force_authenticate(user=self.finance_officer)
+
+        response = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": self.teacher.id,
+                "classroom": self.classroom.id,
+                "start_date": "2026-01-01",
+                "end_date": "2026-01-31",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
