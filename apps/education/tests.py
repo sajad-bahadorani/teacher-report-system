@@ -427,3 +427,30 @@ class TeacherAssignmentTest(TestCase):
             updated_assignment.end_date,
             date(2026, 2, 15)
         )
+
+    def test_teacher_assignment_serializer_partial_update_rejects_overlap(self):
+        assignment1 = TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        assignment2 = TeacherAssignment.objects.create(
+            teacher=self.teacher2,
+            classroom=self.classroom,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        data = {
+            "start_date": "2026-01-15"
+        }
+
+        serializer = TeacherAssignmentSerializer(
+            assignment2,
+            data=data,
+            partial=True,
+        )
+
+        self.assertFalse(serializer.is_valid())
