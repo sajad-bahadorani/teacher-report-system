@@ -1,6 +1,11 @@
 from django.urls import path
 
-from .views import SchoolListCreateView, SchoolUpdateView
+from .views import (
+    SchoolListCreateView,
+    SchoolUpdateView,
+    TermListCreateView,
+    TermUpdateView,
+)
 
 
 urlpatterns = [
@@ -13,5 +18,15 @@ urlpatterns = [
         "schools/<int:pk>/",
         SchoolUpdateView.as_view(),
         name="school-update",
+    ),
+    path(
+        "terms/",
+        TermListCreateView.as_view(),
+        name="term-list-create",
+    ),
+    path(
+        "terms/<int:pk>/",
+        TermUpdateView.as_view(),
+        name="term-update",
     ),
 ]

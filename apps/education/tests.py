@@ -596,3 +596,45 @@ class SchoolAPITest(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+class TermAPITest(APITestCase):
+
+    def setUp(self):
+        self.education_officer = User.objects.create_user(
+            username="education_term",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09130000001",
+            emergency_phone="09130000002",
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+    def test_education_officer_can_create_term(self):
+        data = {
+            "start_date": "2026-01-01",
+            "end_date": "2026-03-31",
+            "term_type": Term.TermType.NORMAL,
+        }
+
+        response = self.client.post(
+            reverse("term-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertTrue(
+            Term.objects.filter(
+                start_date=date(2026, 1, 1),
+                end_date=date(2026, 3, 31),
+                term_type=Term.TermType.NORMAL,
+            ).exists()
+        )
