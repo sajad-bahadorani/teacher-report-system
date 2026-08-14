@@ -1011,3 +1011,51 @@ class TeacherAssignmentAPITest(APITestCase):
                 classroom=self.classroom,
             ).exists()
         )
+
+    def test_classroom_can_have_different_teachers_in_non_overlapping_periods(self):
+        teacher2 = User.objects.create_user(
+            username="teacher_assignment_2",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09150000005",
+            emergency_phone="09150000006",
+        )
+
+        response1 = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": self.teacher.id,
+                "classroom": self.classroom.id,
+                "start_date": "2026-01-01",
+                "end_date": "2026-01-31",
+            },
+            format="json",
+        )
+
+        response2 = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": teacher2.id,
+                "classroom": self.classroom.id,
+                "start_date": "2026-02-01",
+                "end_date": "2026-03-31",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response1.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertEqual(
+            response2.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertEqual(
+            TeacherAssignment.objects.filter(
+                classroom=self.classroom
+            ).count(),
+            2,
+        )
