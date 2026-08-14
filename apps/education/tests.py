@@ -613,6 +613,22 @@ class TermAPITest(APITestCase):
             user=self.education_officer
         )
 
+        self.teacher = User.objects.create_user(
+            username="teacher_term",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09130000003",
+            emergency_phone="09130000004",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="finance_term",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09130000005",
+            emergency_phone="09130000006",
+        )
+
     def test_education_officer_can_create_term(self):
         data = {
             "start_date": "2026-01-01",
@@ -682,4 +698,41 @@ class TermAPITest(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_teacher_cannot_create_term(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("term-list-create"),
+            {
+                "start_date": "2026-01-01",
+                "end_date": "2026-03-31",
+                "term_type": Term.TermType.NORMAL,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+
+    def test_finance_officer_cannot_create_term(self):
+        self.client.force_authenticate(user=self.finance_officer)
+
+        response = self.client.post(
+            reverse("term-list-create"),
+            {
+                "start_date": "2026-01-01",
+                "end_date": "2026-03-31",
+                "term_type": Term.TermType.NORMAL,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
