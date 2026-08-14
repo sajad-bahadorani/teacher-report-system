@@ -10,6 +10,7 @@ from .serializers import (
     SchoolSerializer,
     TermSerializer,
     ClassroomSerializer,
+    TeacherAssignmentSerializer,
 )
 
 class SchoolTest(TestCase):
@@ -308,3 +309,23 @@ class TeacherAssignmentTest(TestCase):
         assignment.end_date = date(2026, 2, 15)
 
         assignment.full_clean()
+
+    def test_teacher_assignment_serializer(self):
+        assignment = TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        serializer = TeacherAssignmentSerializer(assignment)
+
+        self.assertEqual(
+            serializer.data["teacher"],
+            self.teacher1.id
+        )
+
+        self.assertEqual(
+            serializer.data["classroom"],
+            self.classroom.id
+        )
