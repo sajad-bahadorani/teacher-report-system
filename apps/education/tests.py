@@ -186,3 +186,26 @@ class TeacherAssignmentTest(TestCase):
 
         with self.assertRaises(ValidationError):
             assignment.full_clean()
+
+    def test_only_teacher_can_be_assigned(self):
+        assignment = TeacherAssignment(
+            teacher=self.education_officer,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment.full_clean()
+
+
+    def test_assignment_cannot_end_after_term(self):
+        assignment = TeacherAssignment(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 4, 10),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment.full_clean()
