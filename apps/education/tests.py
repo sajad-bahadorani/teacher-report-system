@@ -766,3 +766,55 @@ class TermAPITest(APITestCase):
             term.term_type,
             Term.TermType.SUMMER,
         )
+
+
+class ClassroomAPITest(APITestCase):
+
+    def setUp(self):
+        self.education_officer = User.objects.create_user(
+            username="education_classroom",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09140000001",
+            emergency_phone="09140000002",
+        )
+
+        self.school = School.objects.create(
+            name="Sample School"
+        )
+
+        self.term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+    def test_education_officer_can_create_classroom(self):
+        data = {
+            "school": self.school.id,
+            "term": self.term.id,
+            "session_duration": 90,
+        }
+
+        response = self.client.post(
+            reverse("classroom-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertTrue(
+            Classroom.objects.filter(
+                school=self.school,
+                term=self.term,
+                session_duration=90,
+            ).exists()
+        )

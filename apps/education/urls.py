@@ -5,6 +5,8 @@ from .views import (
     SchoolUpdateView,
     TermListCreateView,
     TermUpdateView,
+    ClassroomListCreateView,
+    ClassroomUpdateView,
 )
 
 
@@ -28,5 +30,16 @@ urlpatterns = [
         "terms/<int:pk>/",
         TermUpdateView.as_view(),
         name="term-update",
+    ),
+
+    path(
+        "classrooms/",
+        ClassroomListCreateView.as_view(),
+        name="classroom-list-create",
+    ),
+    path(
+        "classrooms/<int:pk>/",
+        ClassroomUpdateView.as_view(),
+        name="classroom-update",
     ),
 ]
