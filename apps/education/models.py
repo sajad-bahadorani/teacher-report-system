@@ -18,15 +18,17 @@ class Term(models.Model):
         SUMMER = "summer", "Summer"
         
     start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField()
     term_type = models.CharField(max_length=10, choices=TermType.choices)
     
     def clean(self):
-        if self.end_date < self.start_date:
-            raise ValidationError({"end": "Term end date cannot be before start date."})
+        if self.end_date and self.end_date < self.start_date:
+            raise ValidationError({
+                "end_date": "Term end date cannot be before start date."
+            })
         
     def __str__(self):
-        return f"{self.start} - {self.end}"
+        return f"{self.start_date} - {self.end_date}"
     
     
 
@@ -72,7 +74,7 @@ class TeacherAssignment(models.Model):
                     "start_date": "Assignment cannot start before the term starts."
                 })
 
-            if self.end_date and self.end_date > term.end_date:
+            if self.end_date and term.end_date and self.end_date > term.end_date:
                 raise ValidationError({
                     "end_date": "Assignment cannot end after the term ends."
                 })

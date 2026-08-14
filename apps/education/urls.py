@@ -9,6 +9,7 @@ from .views import (
     ClassroomUpdateView,
     TeacherAssignmentListCreateView,
     TeacherAssignmentUpdateView,
+    MyClassroomListView,
 )
 
 
@@ -53,5 +54,10 @@ urlpatterns = [
         "teacher-assignments/<int:pk>/",
         TeacherAssignmentUpdateView.as_view(),
         name="teacher-assignment-update",
+    ),
+    path(
+        "my-classrooms/",
+        MyClassroomListView.as_view(),
+        name="my-classrooms",
     ),
 ]
