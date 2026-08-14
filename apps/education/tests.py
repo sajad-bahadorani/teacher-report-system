@@ -512,3 +512,33 @@ class SchoolAPITest(APITestCase):
             len(response.data),
             2,
         )
+
+    def test_education_officer_can_update_school(self):
+        school = School.objects.create(
+            name="Old School"
+        )
+
+        data = {
+            "name": "New School"
+        }
+
+        response = self.client.patch(
+            reverse(
+                "school-update",
+                kwargs={"pk": school.pk},
+            ),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        school.refresh_from_db()
+
+        self.assertEqual(
+            school.name,
+            "New School",
+        )
