@@ -736,3 +736,33 @@ class TermAPITest(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+    def test_education_officer_can_update_term(self):
+        term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        response = self.client.patch(
+            reverse(
+                "term-update",
+                kwargs={"pk": term.pk},
+            ),
+            {
+                "term_type": Term.TermType.SUMMER,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        term.refresh_from_db()
+
+        self.assertEqual(
+            term.term_type,
+            Term.TermType.SUMMER,
+        )
