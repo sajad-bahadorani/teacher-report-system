@@ -818,3 +818,21 @@ class ClassroomAPITest(APITestCase):
                 session_duration=90,
             ).exists()
         )
+
+    def test_classroom_api_rejects_invalid_session_duration(self):
+        data = {
+            "school": self.school.id,
+            "term": self.term.id,
+            "session_duration": 45,
+        }
+
+        response = self.client.post(
+            reverse("classroom-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
