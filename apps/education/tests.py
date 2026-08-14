@@ -163,3 +163,26 @@ class TeacherAssignmentTest(TestCase):
             assignment2.teacher,
             self.teacher2
         )
+
+    def test_assignment_end_date_before_start_date(self):
+        assignment = TeacherAssignment(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 1, 1),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment.full_clean()
+
+
+    def test_assignment_cannot_start_before_term(self):
+        assignment = TeacherAssignment(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2025, 12, 25),
+            end_date=date(2026, 1, 31),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment.full_clean()
