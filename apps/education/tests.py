@@ -915,3 +915,33 @@ class ClassroomAPITest(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+    def test_education_officer_can_update_classroom(self):
+        classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        response = self.client.patch(
+            reverse(
+                "classroom-update",
+                kwargs={"pk": classroom.pk},
+            ),
+            {
+                "session_duration": 120,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        classroom.refresh_from_db()
+
+        self.assertEqual(
+            classroom.session_duration,
+            120,
+        )
