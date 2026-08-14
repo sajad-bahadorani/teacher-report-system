@@ -4,8 +4,13 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from apps.accounts.models import User
-from .models import School, Term, Classroom, TeacherAssignment
 
+from .models import Classroom, School, TeacherAssignment, Term
+from .serializers import (
+    SchoolSerializer,
+    TermSerializer,
+    ClassroomSerializer,
+)
 
 class SchoolTest(TestCase):
 
@@ -16,6 +21,18 @@ class SchoolTest(TestCase):
 
         self.assertEqual(
             school.name,
+            "Sample School"
+        )
+
+    def test_school_serializer(self):
+        school = School.objects.create(
+            name="Sample School"
+        )
+
+        serializer = SchoolSerializer(school)
+
+        self.assertEqual(
+            serializer.data["name"],
             "Sample School"
         )
 
@@ -45,6 +62,17 @@ class TermTest(TestCase):
 
         with self.assertRaises(ValidationError):
             term.full_clean()
+
+    def test_term_serializer_rejects_invalid_date_range(self):
+        data = {
+            "start_date": "2026-05-01",
+            "end_date": "2026-01-01",
+            "term_type": Term.TermType.NORMAL,
+        }
+
+        serializer = TermSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
 
 
 class ClassroomTest(TestCase):
@@ -86,6 +114,17 @@ class ClassroomTest(TestCase):
 
         with self.assertRaises(ValidationError):
             classroom.full_clean()
+
+    def test_classroom_serializer_rejects_invalid_session_duration(self):
+        data = {
+            "school": self.school.id,
+            "term": self.term.id,
+            "session_duration": 45,
+        }
+
+        serializer = ClassroomSerializer(data=data)
+
+        self.assertFalse(serializer.is_valid())
 
 
 
