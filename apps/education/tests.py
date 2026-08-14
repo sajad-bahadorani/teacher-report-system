@@ -665,3 +665,21 @@ class TermAPITest(APITestCase):
             len(response.data),
             2,
         )
+
+    def test_term_api_rejects_invalid_date_range(self):
+        data = {
+            "start_date": "2026-05-01",
+            "end_date": "2026-01-01",
+            "term_type": Term.TermType.NORMAL,
+        }
+
+        response = self.client.post(
+            reverse("term-list-create"),
+            data,
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
