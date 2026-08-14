@@ -257,3 +257,15 @@ class TeacherAssignmentTest(TestCase):
 
         with self.assertRaises(ValidationError):
             assignment2.full_clean()
+
+    def test_updating_assignment_does_not_overlap_with_itself(self):
+        assignment = TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        assignment.end_date = date(2026, 2, 15)
+
+        assignment.full_clean()
