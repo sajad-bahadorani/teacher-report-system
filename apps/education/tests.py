@@ -946,6 +946,62 @@ class ClassroomAPITest(APITestCase):
             120,
         )
 
+    def test_teacher_can_list_only_own_classrooms(self):
+        teacher2 = User.objects.create_user(
+            username="teacher_other",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09140000007",
+            emergency_phone="09140000008",
+        )
+
+        classroom1 = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        classroom2 = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=90,
+        )
+
+        TeacherAssignment.objects.create(
+            teacher=self.teacher,
+            classroom=classroom1,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        TeacherAssignment.objects.create(
+            teacher=teacher2,
+            classroom=classroom2,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("my-classrooms")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            1,
+        )
+
+        self.assertEqual(
+            response.data[0]["id"],
+            classroom1.id,
+        )
+
 
 class TeacherAssignmentAPITest(APITestCase):
 
