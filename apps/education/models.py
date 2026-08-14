@@ -54,8 +54,50 @@ class TeacherAssignment(models.Model):
     
     def clean(self):
         if self.end_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "End date cannot be before start date."})
-        
-    
-    def __str__(self):
-        return f"{self.teacher.full_name} - {self.classroom}"
+            raise ValidationError({
+                "end_date": "End date cannot be before start date."
+            })
+
+        if self.teacher_id and self.teacher.role != self.teacher.Role.TEACHER:
+            raise ValidationError({
+                "teacher": "Only teachers can be assigned to a classroom."
+            })
+
+        if self.classroom_id:
+            term = self.classroom.term
+
+            if self.start_date < term.start_date:
+                raise ValidationError({
+                    "start_date": "Assignment cannot start before the term starts."
+                })
+
+            if self.end_date and self.end_date > term.end_date:
+                raise ValidationError({
+                    "end_date": "Assignment cannot end after the term ends."
+                })
+
+        if self.classroom_id and self.start_date:
+            overlapping_assignments = TeacherAssignment.objects.filter(
+                classroom=self.classroom,
+                start_date__lte=(
+                    self.end_date
+                    if self.end_date
+                    else self.classroom.term.end_date
+                ),
+            ).filter(
+                models.Q(end_date__isnull=True)
+                | models.Q(end_date__gte=self.start_date)
+            )
+
+            if self.pk:
+                overlapping_assignments = overlapping_assignments.exclude(
+                    pk=self.pk
+                )
+
+            if overlapping_assignments.exists():
+                raise ValidationError({
+                    "start_date": (
+                        "This classroom already has a teacher "
+                        "assigned during this period."
+                    )
+                })

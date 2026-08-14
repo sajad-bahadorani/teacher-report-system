@@ -3,7 +3,8 @@ from datetime import date
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from .models import School, Term, Classroom
+from apps.accounts.models import User
+from .models import School, Term, Classroom, TeacherAssignment
 
 
 class SchoolTest(TestCase):
@@ -85,3 +86,80 @@ class ClassroomTest(TestCase):
 
         with self.assertRaises(ValidationError):
             classroom.full_clean()
+
+
+
+class TeacherAssignmentTest(TestCase):
+
+    def setUp(self):
+        self.teacher1 = User.objects.create_user(
+            username="teacher1",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09111111111",
+            emergency_phone="09222222222",
+        )
+
+        self.teacher2 = User.objects.create_user(
+            username="teacher2",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09222222222",
+            emergency_phone="09333333333",
+        )
+
+        self.education_officer = User.objects.create_user(
+            username="education1",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09333333333",
+            emergency_phone="09444444444",
+        )
+
+        self.school = School.objects.create(
+            name="Sample School"
+        )
+
+        self.term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        self.classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=90,
+        )
+
+    def test_teacher_assignments_can_have_non_overlapping_date_ranges(self):
+        assignment1 = TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        assignment2 = TeacherAssignment.objects.create(
+            teacher=self.teacher2,
+            classroom=self.classroom,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 3, 31),
+        )
+
+        self.assertEqual(
+            TeacherAssignment.objects.filter(
+                classroom=self.classroom
+            ).count(),
+            2
+        )
+
+        self.assertEqual(
+            assignment1.teacher,
+            self.teacher1
+        )
+
+        self.assertEqual(
+            assignment2.teacher,
+            self.teacher2
+        )
