@@ -793,6 +793,22 @@ class ClassroomAPITest(APITestCase):
             user=self.education_officer
         )
 
+        self.teacher = User.objects.create_user(
+            username="teacher_classroom",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09140000003",
+            emergency_phone="09140000004",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="finance_classroom",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09140000005",
+            emergency_phone="09140000006",
+        )
+
     def test_education_officer_can_create_classroom(self):
         data = {
             "school": self.school.id,
@@ -862,4 +878,40 @@ class ClassroomAPITest(APITestCase):
         self.assertEqual(
             len(response.data),
             2,
+        )
+
+    def test_teacher_cannot_create_classroom(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("classroom-list-create"),
+            {
+                "school": self.school.id,
+                "term": self.term.id,
+                "session_duration": 90,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_finance_officer_cannot_create_classroom(self):
+        self.client.force_authenticate(user=self.finance_officer)
+
+        response = self.client.post(
+            reverse("classroom-list-create"),
+            {
+                "school": self.school.id,
+                "term": self.term.id,
+                "session_duration": 90,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
