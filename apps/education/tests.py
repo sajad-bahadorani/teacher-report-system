@@ -1001,6 +1001,36 @@ class ClassroomAPITest(APITestCase):
             response.data[0]["id"],
             classroom1.id,
         )
+        
+
+    def test_education_officer_cannot_access_my_classrooms(self):
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.get(
+            reverse("my-classrooms")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+
+    def test_finance_officer_cannot_access_my_classrooms(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.get(
+            reverse("my-classrooms")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
 
 
 class TeacherAssignmentAPITest(APITestCase):
