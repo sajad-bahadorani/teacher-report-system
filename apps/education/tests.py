@@ -475,6 +475,22 @@ class SchoolAPITest(APITestCase):
             user=self.education_officer
         )
 
+        self.teacher = User.objects.create_user(
+            username="teacher_school",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09120000003",
+            emergency_phone="09120000004",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="finance_school",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09120000005",
+            emergency_phone="09120000006",
+        )
+
     def test_education_officer_can_create_school(self):
         data = {
             "name": "Maktab School"
@@ -541,4 +557,42 @@ class SchoolAPITest(APITestCase):
         self.assertEqual(
             school.name,
             "New School",
+        )
+
+    def test_teacher_cannot_create_school(self):
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.post(
+            reverse("school-list-create"),
+            {"name": "Forbidden School"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+        self.assertFalse(
+            School.objects.filter(
+                name="Forbidden School"
+            ).exists()
+        )
+
+    def test_finance_officer_cannot_create_school(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.post(
+            reverse("school-list-create"),
+            {"name": "Forbidden School"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
