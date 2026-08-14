@@ -209,3 +209,51 @@ class TeacherAssignmentTest(TestCase):
 
         with self.assertRaises(ValidationError):
             assignment.full_clean()
+
+    def test_teacher_assignments_cannot_overlap(self):
+        TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+        )
+
+        assignment2 = TeacherAssignment(
+            teacher=self.teacher2,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 15),
+            end_date=date(2026, 2, 15),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment2.full_clean()
+
+
+    def test_assignment_can_have_no_end_date(self):
+        assignment = TeacherAssignment(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=None,
+        )
+
+        assignment.full_clean()
+
+
+    def test_open_ended_assignment_cannot_overlap(self):
+        TeacherAssignment.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom,
+            start_date=date(2026, 1, 1),
+            end_date=None,
+        )
+
+        assignment2 = TeacherAssignment(
+            teacher=self.teacher2,
+            classroom=self.classroom,
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 3, 1),
+        )
+
+        with self.assertRaises(ValidationError):
+            assignment2.full_clean()
