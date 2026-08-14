@@ -836,3 +836,30 @@ class ClassroomAPITest(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
+    def test_education_officer_can_list_classrooms(self):
+        Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=90,
+        )
+
+        response = self.client.get(
+            reverse("classroom-list-create")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
