@@ -638,3 +638,30 @@ class TermAPITest(APITestCase):
                 term_type=Term.TermType.NORMAL,
             ).exists()
         )
+
+    def test_education_officer_can_list_terms(self):
+        Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        Term.objects.create(
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 8, 31),
+            term_type=Term.TermType.SUMMER,
+        )
+
+        response = self.client.get(
+            reverse("term-list-create")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
