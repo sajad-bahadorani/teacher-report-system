@@ -5,7 +5,7 @@ from django.db import models
 # Create your models here.
 class SessionReport(models.Model):
     class Status(models.TextChoices):
-        PENDENUG = "pending", "Pending"
+        PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
         
@@ -25,7 +25,7 @@ class SessionReport(models.Model):
     
     is_late = models.BooleanField(default=False)
     
-    rejection_reson = models.TextField(null=True, blank=True)
+    rejection_reason = models.TextField(null=True, blank=True)
     
     def clean(self):
         if self.present_count < 0 or self.absent_count < 0:
