@@ -1,4 +1,5 @@
 from rest_framework import generics
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.accounts.permissions import IsTeacher, IsEducationOfficer
 
@@ -60,4 +61,27 @@ class SessionReportReviewView(generics.UpdateAPIView):
     queryset = SessionReport.objects.all()
     serializer_class = SessionReportReviewSerializer
     permission_classes = [IsEducationOfficer]
+
+
+class SessionReportUpdateView(generics.UpdateAPIView):
+    serializer_class = SessionReportSerializer
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self):
+        return SessionReport.objects.filter(
+            teacher=self.request.user
+        )
+
+    def perform_update(self, serializer):
+        report = self.get_object()
+
+        if report.status != SessionReport.Status.REJECTED:
+            raise ValidationError(
+                "Only rejected reports can be edited."
+            )
+
+        serializer.save(
+            status=SessionReport.Status.PENDING,
+            rejection_reason=None,
+        )
     

@@ -868,3 +868,128 @@ class SessionReportTest(TestCase):
             report.status,
             SessionReport.Status.PENDING,
         )
+
+    def test_teacher_can_edit_rejected_report_and_resubmit(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Old summary",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason="Needs more details.",
+        )
+
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-update",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "lesson_summary": "Updated and more detailed summary",
+                "present_count": 11,
+                "absent_count": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Updated and more detailed summary",
+        )
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+        self.assertIsNone(
+            report.rejection_reason,
+        )
+
+    def test_teacher_cannot_edit_pending_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Pending report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.patch(
+            reverse(
+                "session-report-update",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "lesson_summary": "Changed summary",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Pending report",
+        )
+
+    def test_teacher_cannot_edit_approved_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Approved report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.APPROVED,
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.patch(
+            reverse(
+                "session-report-update",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "lesson_summary": "Changed summary",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Approved report",
+        )

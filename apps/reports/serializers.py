@@ -24,8 +24,9 @@ class SessionReportSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         teacher = request.user
 
-        classroom = attrs.get("classroom")
-        session_date = attrs.get("session_date")
+        classroom = attrs.get("classroom", getattr(self.instance, "classroom", None))
+
+        session_date = attrs.get("session_date", getattr(self.instance, "session_date", None))
 
         assignment_exists = TeacherAssignment.objects.filter(
             teacher=teacher,
