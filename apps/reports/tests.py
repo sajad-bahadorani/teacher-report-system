@@ -3,9 +3,12 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 
+from rest_framework.test import APIRequestFactory
+
 from apps.accounts.models import User
 from apps.education.models import School, Term, Classroom, TeacherAssignment
-from apps.reports.models import SessionReport
+from .models import SessionReport
+from .serializers import SessionReportSerializer
 
 
 class SessionReportTest(TestCase):
@@ -116,3 +119,118 @@ class SessionReportTest(TestCase):
         )
 
         self.assertTrue(report.calculate_is_late())
+
+
+    def test_serializer_creates_report_for_teacher_own_classroom(self):
+        factory = APIRequestFactory()
+
+        request = factory.post("/api/reports/")
+        request.user = self.teacher
+
+        session_time = timezone.now()
+
+        serializer = SessionReportSerializer(
+            data={
+                "classroom": self.classroom.id,
+                "session_date": session_time,
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            context={
+                "request": request,
+            },
+        )
+
+        self.assertTrue(
+            serializer.is_valid(),
+            serializer.errors,
+        )
+
+        report = serializer.save()
+
+        self.assertEqual(
+            report.teacher,
+            self.teacher,
+        )
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+        self.assertIsNotNone(
+            report.submitted_at,
+        )
+
+        self.assertFalse(
+            report.is_late,
+        )
+
+    def test_teacher_cannot_create_report_for_another_teachers_classroom(self):
+        other_teacher = User.objects.create_user(
+            username="other_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09160000003",
+            emergency_phone="09160000004",
+        )
+
+        factory = APIRequestFactory()
+        request = factory.post("/api/reports/")
+        request.user = other_teacher
+
+        serializer = SessionReportSerializer(
+            data={
+                "classroom": self.classroom.id,
+                "session_date": timezone.now(),
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            context={
+                "request": request,
+            },
+        )
+
+        self.assertFalse(serializer.is_valid())
+
+        self.assertIn(
+            "non_field_errors",
+            serializer.errors,
+        )
+
+    def test_teacher_cannot_create_report_outside_assignment_period(self):
+        factory = APIRequestFactory()
+        request = factory.post("/api/reports/")
+        request.user = self.teacher
+
+        session_time = timezone.make_aware(
+            timezone.datetime(
+                self.term.start_date.year,
+                self.term.start_date.month,
+                self.term.start_date.day,
+                10,
+                0,
+            )
+        ) - timedelta(days=1)
+
+        serializer = SessionReportSerializer(
+            data={
+                "classroom": self.classroom.id,
+                "session_date": session_time,
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            context={
+                "request": request,
+            },
+        )
+
+        self.assertFalse(serializer.is_valid())
+
+        self.assertIn(
+            "non_field_errors",
+            serializer.errors,
+        )
