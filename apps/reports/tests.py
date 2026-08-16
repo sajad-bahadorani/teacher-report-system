@@ -412,3 +412,77 @@ class SessionReportTest(TestCase):
             response.data[0]["lesson_summary"],
             "My report",
         )
+
+    def test_education_officer_can_list_all_reports(self):
+        other_teacher = User.objects.create_user(
+            username="teacher_report_2",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09160000011",
+            emergency_phone="09160000012",
+        )
+
+        other_classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        TeacherAssignment.objects.create(
+            teacher=other_teacher,
+            classroom=other_classroom,
+            start_date=self.term.start_date,
+            end_date=self.term.end_date,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="First report",
+            present_count=10,
+            absent_count=1,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReport.objects.create(
+            teacher=other_teacher,
+            classroom=other_classroom,
+            session_date=timezone.now(),
+            lesson_summary="Second report",
+            present_count=8,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.get(
+            reverse("education-report-list")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
+
+    def test_teacher_cannot_access_education_report_list(self):
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.get(
+            reverse("education-report-list")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
