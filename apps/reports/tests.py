@@ -993,3 +993,103 @@ class SessionReportTest(TestCase):
             report.lesson_summary,
             "Approved report",
         )
+
+    def test_education_officer_cannot_change_report_content(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Original summary",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+                "lesson_summary": "Changed by education officer",
+                "present_count": 99,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.APPROVED,
+        )
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Original summary",
+        )
+
+        self.assertEqual(
+            report.present_count,
+            10,
+        )
+
+    def test_education_officer_cannot_change_report_content(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Original summary",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+                "lesson_summary": "Changed by education officer",
+                "present_count": 99,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.APPROVED,
+        )
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Original summary",
+        )
+
+        self.assertEqual(
+            report.present_count,
+            10,
+        )
