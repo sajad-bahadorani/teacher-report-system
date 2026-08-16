@@ -667,3 +667,204 @@ class SessionReportTest(TestCase):
             response.data[0]["lesson_summary"],
             "Recent report",
         )
+
+    def test_education_officer_can_approve_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.APPROVED,
+        )
+
+        self.assertIsNone(
+            report.rejection_reason,
+        )
+
+    def test_education_officer_can_reject_report_with_reason(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.REJECTED,
+                "rejection_reason": "Lesson summary needs more details.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.REJECTED,
+        )
+
+        self.assertEqual(
+            report.rejection_reason,
+            "Lesson summary needs more details.",
+        )
+
+    def test_education_officer_cannot_reject_report_without_reason(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.REJECTED,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        report.refresh_from_db()
+
+        # گزارش باید همچنان pending باقی مانده باشد
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+    def test_teacher_cannot_review_own_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+    def test_finance_officer_cannot_review_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )

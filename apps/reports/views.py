@@ -3,7 +3,7 @@ from rest_framework import generics
 from apps.accounts.permissions import IsTeacher, IsEducationOfficer
 
 from .models import SessionReport
-from .serializers import SessionReportSerializer
+from .serializers import SessionReportSerializer, SessionReportReviewSerializer
 
 
 class SessionReportListCreateView(generics.ListCreateAPIView):
@@ -54,4 +54,10 @@ class EducationReportListView(generics.ListAPIView):
             )
 
         return queryset
+    
+
+class SessionReportReviewView(generics.UpdateAPIView):
+    queryset = SessionReport.objects.all()
+    serializer_class = SessionReportReviewSerializer
+    permission_classes = [IsEducationOfficer]
     

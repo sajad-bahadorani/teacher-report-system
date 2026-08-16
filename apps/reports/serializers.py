@@ -60,3 +60,29 @@ class SessionReportSerializer(serializers.ModelSerializer):
         report.save()
 
         return report
+
+
+class SessionReportReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SessionReport
+        fields = [
+            "status",
+            "rejection_reason",
+        ]
+
+    def validate(self, attrs):
+        status = attrs.get("status")
+        rejection_reason = attrs.get("rejection_reason")
+
+        if (
+            status == SessionReport.Status.REJECTED
+            and not rejection_reason
+        ):
+            raise serializers.ValidationError({
+                "rejection_reason": "Rejection reason is required."
+            })
+
+        if status == SessionReport.Status.APPROVED:
+            attrs["rejection_reason"] = None
+
+        return attrs
