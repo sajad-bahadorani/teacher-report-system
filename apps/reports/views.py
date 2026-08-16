@@ -16,7 +16,42 @@ class SessionReportListCreateView(generics.ListCreateAPIView):
         )
 
 class EducationReportListView(generics.ListAPIView):
-    queryset = SessionReport.objects.all()
     serializer_class = SessionReportSerializer
     permission_classes = [IsEducationOfficer]
+
+    def get_queryset(self):
+        queryset = SessionReport.objects.all()
+
+        school = self.request.query_params.get("school")
+        classroom = self.request.query_params.get("classroom")
+        teacher = self.request.query_params.get("teacher")
+        start_date = self.request.query_params.get("start_date")
+        end_date = self.request.query_params.get("end_date")
+
+        if school:
+            queryset = queryset.filter(
+                classroom__school_id=school
+            )
+
+        if classroom:
+            queryset = queryset.filter(
+                classroom_id=classroom
+            )
+
+        if teacher:
+            queryset = queryset.filter(
+                teacher_id=teacher
+            )
+
+        if start_date:
+            queryset = queryset.filter(
+                session_date__date__gte=start_date
+            )
+
+        if end_date:
+            queryset = queryset.filter(
+                session_date__date__lte=end_date
+            )
+
+        return queryset
     

@@ -486,3 +486,184 @@ class SessionReportTest(TestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+    def test_education_officer_can_filter_reports_by_teacher(self):
+        other_teacher = User.objects.create_user(
+            username="filter_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09160000013",
+            emergency_phone="09160000014",
+        )
+
+        other_classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Teacher one report",
+            present_count=10,
+            absent_count=1,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReport.objects.create(
+            teacher=other_teacher,
+            classroom=other_classroom,
+            session_date=timezone.now(),
+            lesson_summary="Teacher two report",
+            present_count=8,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.get(
+            reverse("education-report-list"),
+            {"teacher": self.teacher.id},
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            1,
+        )
+
+        self.assertEqual(
+            response.data[0]["lesson_summary"],
+            "Teacher one report",
+        )
+
+    def test_education_officer_can_filter_reports_by_school_and_classroom(self):
+        other_school = School.objects.create(
+            name="Other School"
+        )
+
+        other_classroom = Classroom.objects.create(
+            school=other_school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Main classroom report",
+            present_count=10,
+            absent_count=1,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=other_classroom,
+            session_date=timezone.now(),
+            lesson_summary="Other classroom report",
+            present_count=8,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        school_response = self.client.get(
+            reverse("education-report-list"),
+            {"school": self.school.id},
+        )
+
+        self.assertEqual(
+            school_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(school_response.data),
+            1,
+        )
+
+        classroom_response = self.client.get(
+            reverse("education-report-list"),
+            {"classroom": self.classroom.id},
+        )
+
+        self.assertEqual(
+            classroom_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(classroom_response.data),
+            1,
+        )
+
+    def test_education_officer_can_filter_reports_by_date_range(self):
+        first_session = timezone.now() - timedelta(days=10)
+        second_session = timezone.now() - timedelta(days=2)
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=first_session,
+            lesson_summary="Old report",
+            present_count=10,
+            absent_count=1,
+            submitted_at=first_session + timedelta(hours=1),
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=second_session,
+            lesson_summary="Recent report",
+            present_count=8,
+            absent_count=2,
+            submitted_at=second_session + timedelta(hours=1),
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        start_date = (
+            timezone.now() - timedelta(days=5)
+        ).date().isoformat()
+
+        end_date = timezone.now().date().isoformat()
+
+        response = self.client.get(
+            reverse("education-report-list"),
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            1,
+        )
+
+        self.assertEqual(
+            response.data[0]["lesson_summary"],
+            "Recent report",
+        )
