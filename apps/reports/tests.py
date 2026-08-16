@@ -1,8 +1,11 @@
 from datetime import timedelta
 
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
+from rest_framework import status
+from rest_framework.test import APIClient
 from rest_framework.test import APIRequestFactory
 
 from apps.accounts.models import User
@@ -44,6 +47,25 @@ class SessionReportTest(TestCase):
             start_date=self.term.start_date,
             end_date=self.term.end_date,
         )
+
+        self.client = APIClient()
+
+        self.education_officer = User.objects.create_user(
+            username="education_report",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09160000005",
+            emergency_phone="09160000006",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="finance_report",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09160000007",
+            emergency_phone="09160000008",
+        )
+
 
     def test_create_session_report(self):
         session_time = timezone.now()
@@ -233,4 +255,160 @@ class SessionReportTest(TestCase):
         self.assertIn(
             "non_field_errors",
             serializer.errors,
+        )
+
+    def test_teacher_can_create_report_for_own_classroom(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        url = reverse("session-report-list-create")
+
+        response = self.client.post(
+            url,
+            {
+                "classroom": self.classroom.id,
+                "session_date": timezone.now().isoformat(),
+                "lesson_summary": "Introduction to Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        self.assertEqual(
+            SessionReport.objects.count(),
+            1,
+        )
+
+        report = SessionReport.objects.first()
+
+        self.assertEqual(
+            report.teacher,
+            self.teacher,
+        )
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+        self.assertIsNotNone(
+            report.submitted_at,
+        )
+
+    def test_education_officer_cannot_create_session_report(self):
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        url = reverse("session-report-list-create")
+
+        response = self.client.post(
+            url,
+            {
+                "classroom": self.classroom.id,
+                "session_date": timezone.now().isoformat(),
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_finance_officer_cannot_create_session_report(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        url = reverse("session-report-list-create")
+
+        response = self.client.post(
+            url,
+            {
+                "classroom": self.classroom.id,
+                "session_date": timezone.now().isoformat(),
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_teacher_can_list_only_own_reports(self):
+        other_teacher = User.objects.create_user(
+            username="other_report_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09160000009",
+            emergency_phone="09160000010",
+        )
+
+        other_classroom = Classroom.objects.create(
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        TeacherAssignment.objects.create(
+            teacher=other_teacher,
+            classroom=other_classroom,
+            start_date=self.term.start_date,
+            end_date=self.term.end_date,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="My report",
+            present_count=10,
+            absent_count=1,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReport.objects.create(
+            teacher=other_teacher,
+            classroom=other_classroom,
+            session_date=timezone.now(),
+            lesson_summary="Other teacher report",
+            present_count=8,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.get(
+            reverse("session-report-list-create")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            1,
+        )
+
+        self.assertEqual(
+            response.data[0]["lesson_summary"],
+            "My report",
         )
