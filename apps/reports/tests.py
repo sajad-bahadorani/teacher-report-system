@@ -1093,3 +1093,196 @@ class SessionReportTest(TestCase):
             report.present_count,
             10,
         )
+
+    def test_late_report_is_automatically_marked_as_late(self):
+        assignment = TeacherAssignment.objects.get(
+            teacher=self.teacher,
+            classroom=self.classroom,
+        )
+
+        assignment.start_date = (
+            timezone.now() - timedelta(days=10)
+        ).date()
+
+        assignment.save()
+
+        self.client.force_authenticate(user=self.teacher)
+
+        session_time = timezone.now() - timedelta(hours=49)
+
+        response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": self.classroom.id,
+                "session_date": session_time.isoformat(),
+                "lesson_summary": "Late session report",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        report = SessionReport.objects.get(
+            pk=response.data["id"]
+        )
+
+        self.assertTrue(report.is_late)
+        self.assertIsNotNone(report.submitted_at)
+
+    def test_on_time_report_is_not_marked_as_late(self):
+        assignment = TeacherAssignment.objects.get(
+            teacher=self.teacher,
+            classroom=self.classroom,
+        )
+
+        assignment.start_date = (
+            timezone.now() - timedelta(days=10)
+        ).date()
+
+        assignment.save()
+
+        self.client.force_authenticate(user=self.teacher)
+
+        session_time = timezone.now() - timedelta(hours=47)
+
+        response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": self.classroom.id,
+                "session_date": session_time.isoformat(),
+                "lesson_summary": "On time session report",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        report = SessionReport.objects.get(
+            pk=response.data["id"]
+        )
+
+        self.assertFalse(report.is_late)
+
+    def test_teacher_cannot_set_system_fields_when_creating_report(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        session_time = timezone.now()
+
+        response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": self.classroom.id,
+                "session_date": session_time.isoformat(),
+                "lesson_summary": "Django REST Framework",
+                "present_count": 10,
+                "absent_count": 2,
+
+                # Teacher tries to manipulate system fields
+                "status": SessionReport.Status.APPROVED,
+                "is_late": True,
+                "rejection_reason": "Fake reason",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        report = SessionReport.objects.get(
+            pk=response.data["id"]
+        )
+
+        # System must control these values
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+        self.assertFalse(report.is_late)
+
+        self.assertIsNone(
+            report.rejection_reason,
+        )
+
+        self.assertEqual(
+            report.teacher,
+            self.teacher,
+        )
+
+    def test_teacher_cannot_change_system_fields_when_resubmitting_report(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Old summary",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason="Needs more details.",
+        )
+
+        original_submitted_at = report.submitted_at
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.patch(
+            reverse(
+                "session-report-update",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "lesson_summary": "Updated summary",
+
+                # Teacher tries to manipulate system fields
+                "status": SessionReport.Status.APPROVED,
+                "is_late": True,
+                "submitted_at": (
+                    timezone.now() - timedelta(days=10)
+                ).isoformat(),
+                "rejection_reason": "Fake reason",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report.refresh_from_db()
+
+        self.assertEqual(
+            report.lesson_summary,
+            "Updated summary",
+        )
+
+        # Resubmission must always return to pending
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+
+        # Teacher cannot manipulate these fields
+        self.assertFalse(report.is_late)
+
+        self.assertIsNone(
+            report.rejection_reason,
+        )
+
+        self.assertEqual(
+            report.submitted_at,
+            original_submitted_at,
+        )
