@@ -811,6 +811,7 @@ class ClassroomAPITest(APITestCase):
 
     def test_education_officer_can_create_classroom(self):
         data = {
+            "name": "Sample Classroom",
             "school": self.school.id,
             "term": self.term.id,
             "session_duration": 90,

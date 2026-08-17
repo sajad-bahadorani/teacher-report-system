@@ -37,6 +37,8 @@ class Classroom(models.Model):
         MINUTES_60 = 60, "60 minutes"
         MINUTES_90 = 90, "90 minutes"
         MINUTES_120 = 120, "120 minutes"
+
+    name = models.CharField(max_length=100)
         
     school = models.ForeignKey(School, on_delete=models.PROTECT, related_name="classrooms")
     term = models.ForeignKey(Term, on_delete=models.PROTECT, related_name="classrooms")
