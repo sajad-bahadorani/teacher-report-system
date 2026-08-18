@@ -1,3 +1,5 @@
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
@@ -15,6 +17,17 @@ class SessionReportListCreateView(generics.ListCreateAPIView):
         return SessionReport.objects.filter(
             teacher=self.request.user
         )
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter("school", int, OpenApiParameter.QUERY),
+        OpenApiParameter("classroom", int, OpenApiParameter.QUERY),
+        OpenApiParameter("teacher", int, OpenApiParameter.QUERY),
+        OpenApiParameter("start_date", str, OpenApiParameter.QUERY),
+        OpenApiParameter("end_date", str, OpenApiParameter.QUERY),
+    ]
+)
 
 class EducationReportListView(generics.ListAPIView):
     serializer_class = SessionReportSerializer
