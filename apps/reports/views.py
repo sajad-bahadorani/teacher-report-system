@@ -179,6 +179,7 @@ class TeacherMonthlyReaportSummaryView(APIView):
 class GroupApproveView(APIView):
     permission_classes = [IsEducationOfficer]
 
+    @extend_schema(request=GroupApproveSerializer)
     def post(self, request):
         serializer = GroupApproveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
