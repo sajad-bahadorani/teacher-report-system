@@ -171,3 +171,110 @@ Run all project tests:
 
 ```bash
 python manage.py test
+
+
+## Phase 3 - Session Report Workflow
+
+In Phase 3, the session reporting workflow was implemented.
+
+### Features
+
+- Session report creation
+  - Teachers can create reports for their own classrooms
+  - Each report includes:
+    - Session date and time
+    - Lesson summary
+    - Present students count
+    - Absent students count
+
+- Teacher classroom validation
+  - Teachers can only create reports for classrooms assigned to them
+  - The session date must be inside the teacher assignment period
+
+- Late submission detection
+  - The system automatically stores the submission time
+  - Reports submitted more than 48 hours after the session are marked as late
+  - Reports submitted at exactly 48 hours are not considered late
+  - Teachers cannot manually change the late submission status
+
+- Teacher report access
+  - Teachers can view only their own reports
+  - Teachers cannot create reports for another teacher's classroom
+
+- Education Officer report access
+  - Education Officers can view submitted reports
+  - Reports can be filtered by:
+    - School
+    - Classroom
+    - Teacher
+    - Start date
+    - End date
+
+- Report review workflow
+  - Education Officers can approve reports
+  - Education Officers can reject reports
+  - A rejection reason is required when a report is rejected
+  - Education Officers cannot modify report content
+  - Teachers cannot approve or reject their own reports
+
+- Rejected report resubmission
+  - Teachers can edit rejected reports
+  - Pending and approved reports cannot be edited by teachers
+  - After editing a rejected report:
+    - Status returns to pending
+    - Rejection reason is cleared
+    - The original late submission status is preserved
+
+- System-controlled fields
+  - Teacher
+  - Report status
+  - Submission time
+  - Late submission flag
+  - Rejection reason
+
+  These fields cannot be manually manipulated by teachers.
+
+### Optional Features
+
+- Monthly report summary
+  - Teachers can view a monthly summary of their reports
+  - The summary includes:
+    - Total reports
+    - Pending reports
+    - Approved reports
+    - Rejected reports
+
+- Group approval
+  - Education Officers can approve multiple pending reports in one request
+  - Only pending reports are affected
+
+- Report status history
+  - Status changes are recorded
+  - Each history record contains:
+    - Report
+    - New status
+    - User who made the change
+    - Change time
+    - Optional note
+  - Teachers can view the history of their own reports
+  - Education Officers can view report histories
+  - Teachers cannot view another teacher's report history
+
+### API Endpoints
+
+```text
+GET  /api/reports/
+POST /api/reports/
+
+GET   /api/reports/{id}/
+PATCH /api/reports/{id}/
+
+GET /api/reports/education/
+
+PATCH /api/reports/{id}/review/
+
+GET /api/reports/monthly-summary/
+
+POST /api/reports/group-approve/
+
+GET /api/reports/{id}/history/
