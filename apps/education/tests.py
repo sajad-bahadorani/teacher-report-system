@@ -597,6 +597,11 @@ class SchoolAPITest(APITestCase):
             status.HTTP_403_FORBIDDEN,
         )
 
+    def test_school_str(self):
+        school = School.objects.create(name="Test School")
+        self.assertEqual(str(school), "Test School")
+
+
 
 class TermAPITest(APITestCase):
 
@@ -767,6 +772,17 @@ class TermAPITest(APITestCase):
             Term.TermType.SUMMER,
         )
 
+    def test_term_str(self):
+        term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        self.assertEqual(
+            str(term),
+            "2026-01-01 - 2026-03-31",
+        )
 
 class ClassroomAPITest(APITestCase):
 
@@ -1031,6 +1047,27 @@ class ClassroomAPITest(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_classroom_str(self):
+        school = School.objects.create(name="Test School")
+
+        term = Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        classroom = Classroom.objects.create(
+            name="Class A",
+            school=school,
+            term=term,
+            session_duration=90,
+        )
+
+        self.assertEqual(
+            str(classroom),
+            "Test School - 2026-01-01 - 2026-03-31 - 90 min",
         )
 
 

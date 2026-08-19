@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -1762,4 +1763,103 @@ class SessionReportTest(TestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_200_OK,
+        )
+
+
+
+    def test_calculate_is_late_without_submitted_at(self):
+        report = SessionReport(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Test",
+            present_count=10,
+            absent_count=2,
+            submitted_at=None,
+        )
+
+        self.assertFalse(
+            report.calculate_is_late()
+        )
+
+
+    def test_submit_sets_report_fields(self):
+        report = SessionReport(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Test",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason="Old reason",
+        )
+
+        report.submit()
+
+        self.assertIsNotNone(report.submitted_at)
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.PENDING,
+        )
+        self.assertIsNone(
+            report.rejection_reason,
+        )
+
+
+    def test_rejected_report_requires_rejection_reason(self):
+        report = SessionReport(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Test",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason=None,
+        )
+
+        with self.assertRaises(ValidationError):
+            report.full_clean()
+
+
+    def test_session_report_str(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Test",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.assertIn(
+            str(self.classroom),
+            str(report),
+        )
+
+
+    def test_status_history_str(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Test",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        history = SessionReportStatusHistory.objects.create(
+            report=report,
+            status=SessionReport.Status.APPROVED,
+            changed_by=self.education_officer,
+        )
+
+        self.assertEqual(
+            str(history),
+            f"{report.id} - approved",
         )
