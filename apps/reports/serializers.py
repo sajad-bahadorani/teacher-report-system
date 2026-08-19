@@ -87,3 +87,10 @@ class SessionReportReviewSerializer(serializers.ModelSerializer):
             attrs["rejection_reason"] = None
 
         return attrs
+
+
+class GroupApproveSerializer(serializers.Serializer):
+    report_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        allow_empty=False,
+    )

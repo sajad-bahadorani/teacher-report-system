@@ -6,6 +6,7 @@ from .views import (
     SessionReportReviewView,
     SessionReportUpdateView,
     TeacherMonthlyReaportSummaryView,
+    GroupApproveView,
     )
 
 
@@ -15,4 +16,5 @@ urlpatterns = [
     path("<int:pk>/review/", SessionReportReviewView.as_view(), name="session-report-review"),
     path("<int:pk>/", SessionReportUpdateView.as_view(), name="session-report-update"),
     path("monthly-summary/", TeacherMonthlyReaportSummaryView.as_view(), name="teacher-monthly-report-summary"),
+    path("group-approve/", GroupApproveView.as_view(), name="group-approve"),
 ]

@@ -1404,3 +1404,109 @@ class SessionReportTest(TestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+    def test_education_officer_can_approve_reports_in_group(self):
+        report1 = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report 1",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        report2 = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report 2",
+            present_count=8,
+            absent_count=1,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.post(
+            reverse("group-approve"),
+            {
+                "report_ids": [
+                    report1.id,
+                    report2.id,
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            response.data["approved_count"],
+            2,
+        )
+
+        report1.refresh_from_db()
+        report2.refresh_from_db()
+
+        self.assertEqual(
+            report1.status,
+            SessionReport.Status.APPROVED,
+        )
+
+        self.assertEqual(
+            report2.status,
+            SessionReport.Status.APPROVED,
+        )
+
+    def test_teacher_cannot_approve_reports_in_group(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("group-approve"),
+            {
+                "report_ids": [report.id]
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_group_approve_requires_report_ids(self):
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.post(
+            reverse("group-approve"),
+            {
+                "report_ids": []
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )

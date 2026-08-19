@@ -3,14 +3,18 @@ from django.db.models import Count, Q
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.accounts.permissions import IsTeacher, IsEducationOfficer
 
 from .models import SessionReport
-from .serializers import SessionReportSerializer, SessionReportReviewSerializer
+from .serializers import (
+    SessionReportSerializer,
+    SessionReportReviewSerializer,
+    GroupApproveSerializer,
+)
 
 
 class SessionReportListCreateView(generics.ListCreateAPIView):
@@ -150,4 +154,28 @@ class TeacherMonthlyReaportSummaryView(APIView):
             "year": int(year),
             "month": int(month),
             **summary,
+        })
+
+
+class GroupApproveView(APIView):
+    permission_classes = [IsEducationOfficer]
+
+    def post(self, request):
+        serializer = GroupApproveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        report_ids = serializer.validated_data["report_ids"]
+
+        reports = SessionReport.objects.filter(
+            id__in=report_ids,
+            status=SessionReport.Status.PENDING,
+        )
+
+        updated_count = reports.update(
+            status=SessionReport.Status.APPROVED,
+            rejection_reason=None,
+        )
+
+        return Response({
+            "approved_count": updated_count
         })
