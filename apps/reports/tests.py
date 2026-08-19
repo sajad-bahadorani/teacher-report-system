@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
 from apps.education.models import School, Term, Classroom, TeacherAssignment
-from .models import SessionReport
+from .models import SessionReport, SessionReportStatusHistory
 from .serializers import SessionReportSerializer
 
 
@@ -1509,4 +1509,257 @@ class SessionReportTest(TestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
+        )
+
+
+    def test_reject_report_creates_status_history(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Django REST Framework",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "status": SessionReport.Status.REJECTED,
+                "rejection_reason": "Needs more details.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        history = SessionReportStatusHistory.objects.get(
+            report=report
+        )
+
+        self.assertEqual(
+            history.status,
+            SessionReport.Status.REJECTED,
+        )
+
+        self.assertEqual(
+            history.changed_by,
+            self.education_officer,
+        )
+
+        self.assertEqual(
+            history.note,
+            "Needs more details.",
+        )
+
+    def test_resubmit_report_creates_status_history(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Old summary",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason="Needs more details.",
+        )
+
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.patch(
+            reverse(
+                "session-report-update",
+                kwargs={"pk": report.pk},
+            ),
+            {
+                "lesson_summary": "Updated summary",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        history = SessionReportStatusHistory.objects.get(
+            report=report
+        )
+
+        self.assertEqual(
+            history.status,
+            SessionReport.Status.PENDING,
+        )
+
+        self.assertEqual(
+            history.changed_by,
+            self.teacher,
+        )
+
+    def test_group_approve_creates_status_history(self):
+        report1 = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report 1",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        report2 = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report 2",
+            present_count=8,
+            absent_count=1,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.post(
+            reverse("group-approve"),
+            {
+                "report_ids": [
+                    report1.id,
+                    report2.id,
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            SessionReportStatusHistory.objects.filter(
+                status=SessionReport.Status.APPROVED
+            ).count(),
+            2,
+        )
+
+    def test_teacher_can_view_own_report_history(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReportStatusHistory.objects.create(
+            report=report,
+            status=SessionReport.Status.REJECTED,
+            changed_by=self.education_officer,
+            note="Needs more details.",
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse(
+                "session-report-history",
+                kwargs={"pk": report.pk},
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            1,
+        )
+
+    def test_teacher_cannot_view_another_teacher_report_history(self):
+        other_teacher = User.objects.create_user(
+            username="history_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09160000020",
+            emergency_phone="09160000021",
+        )
+
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(user=other_teacher)
+
+        response = self.client.get(
+            reverse(
+                "session-report-history",
+                kwargs={"pk": report.pk},
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_education_officer_can_view_report_history(self):
+        report = SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.now(),
+            lesson_summary="Report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        SessionReportStatusHistory.objects.create(
+            report=report,
+            status=SessionReport.Status.APPROVED,
+            changed_by=self.education_officer,
+        )
+
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.get(
+            reverse(
+                "session-report-history",
+                kwargs={"pk": report.pk},
+            )
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
         )

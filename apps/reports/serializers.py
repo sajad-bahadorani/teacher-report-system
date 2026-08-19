@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.education.models import TeacherAssignment
 
-from .models import SessionReport
+from .models import SessionReport, SessionReportStatusHistory
 
 
 class SessionReportSerializer(serializers.ModelSerializer):
@@ -94,3 +94,16 @@ class GroupApproveSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False,
     )
+
+class SessionReportStatusHistorySerializer(serializers.ModelSerializer):
+    changed_by = serializers.StringRelatedField()
+
+    class Meta:
+        model = SessionReportStatusHistory
+        fields = [
+            "id",
+            "status",
+            "changed_by",
+            "note",
+            "created_at",
+        ]

@@ -59,3 +59,30 @@ class SessionReport(BaseModel):
             f"{self.classroom} - "
             f"{self.session_date}"
         )
+    
+
+class SessionReportStatusHistory(BaseModel):
+    report = models.ForeignKey(
+        SessionReport,
+        on_delete=models.CASCADE,
+        related_name="status_history",
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=SessionReport.Status.choices,
+    )
+
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="report_status_changes",
+    )
+
+    note = models.TextField(
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.report_id} - {self.status}"

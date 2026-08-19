@@ -3,17 +3,19 @@ from django.db.models import Count, Q
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from apps.accounts.models import User
 from apps.accounts.permissions import IsTeacher, IsEducationOfficer
 
-from .models import SessionReport
+from .models import SessionReport, SessionReportStatusHistory
 from .serializers import (
     SessionReportSerializer,
     SessionReportReviewSerializer,
     GroupApproveSerializer,
+    SessionReportStatusHistorySerializer,
 )
 
 
@@ -83,6 +85,16 @@ class SessionReportReviewView(generics.UpdateAPIView):
     serializer_class = SessionReportReviewSerializer
     permission_classes = [IsEducationOfficer]
 
+    def perform_update(self, serializer):
+        report = serializer.save()
+
+        SessionReportStatusHistory.objects.create(
+            report=report,
+            status=report.status,
+            changed_by=self.request.user,
+            note=report.rejection_reason,
+        )
+
 
 class SessionReportUpdateView(generics.UpdateAPIView):
     serializer_class = SessionReportSerializer
@@ -101,9 +113,16 @@ class SessionReportUpdateView(generics.UpdateAPIView):
                 "Only rejected reports can be edited."
             )
 
-        serializer.save(
+        report = serializer.save(
             status=SessionReport.Status.PENDING,
             rejection_reason=None,
+        )
+
+        SessionReportStatusHistory.objects.create(
+            report=report,
+            status=SessionReport.Status.PENDING,
+            changed_by=self.request.user,
+            note="Report edited and resubmitted.",
         )
 
 
@@ -166,16 +185,55 @@ class GroupApproveView(APIView):
 
         report_ids = serializer.validated_data["report_ids"]
 
-        reports = SessionReport.objects.filter(
-            id__in=report_ids,
-            status=SessionReport.Status.PENDING,
+        reports = list(
+            SessionReport.objects.filter(
+                id__in=report_ids,
+                status=SessionReport.Status.PENDING,
+            )
         )
 
-        updated_count = reports.update(
+        SessionReport.objects.filter(
+            id__in=[report.id for report in reports]
+        ).update(
             status=SessionReport.Status.APPROVED,
             rejection_reason=None,
         )
 
+        SessionReportStatusHistory.objects.bulk_create(
+            [
+                SessionReportStatusHistory(
+                    report=report,
+                    status=SessionReport.Status.APPROVED,
+                    changed_by=request.user,
+                    note="Approved in group.",
+                )
+                for report in reports
+            ]
+        )
+
         return Response({
-            "approved_count": updated_count
+            "approved_count": len(reports)
         })
+
+
+class SessionReportHistoryView(generics.ListAPIView):
+    serializer_class = SessionReportStatusHistorySerializer
+
+    def get_queryset(self):
+        report_id = self.kwargs["pk"]
+
+        report = SessionReport.objects.get(pk=report_id)
+
+        user = self.request.user
+
+        if (
+            user.role != User.Role.EDUCATION_OFFICER
+            and report.teacher != user
+        ):
+            raise PermissionDenied(
+                "You do not have permission to view this report history."
+            )
+
+        return SessionReportStatusHistory.objects.filter(
+            report_id=report_id
+        ).order_by("created_at")
