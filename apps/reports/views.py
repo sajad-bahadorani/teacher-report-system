@@ -1,7 +1,11 @@
+from django.db.models import Count, Q
+
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from apps.accounts.permissions import IsTeacher, IsEducationOfficer
 
@@ -97,4 +101,53 @@ class SessionReportUpdateView(generics.UpdateAPIView):
             status=SessionReport.Status.PENDING,
             rejection_reason=None,
         )
-    
+
+
+class TeacherMonthlyReaportSummaryView(APIView):
+    permission_classes = [IsTeacher]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="year",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+            ),
+            OpenApiParameter(
+                name="month",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=True,
+            ),
+        ]
+    )
+
+    def get(self, request):
+        year = request.query_params.get("year")
+        month = request.query_params.get("month")
+
+        if not year or not month:
+            raise ValidationError("year and month are required.")
+
+        reports = SessionReport.objects.filter(
+            teacher=request.user,
+            session_date__year=year,
+            session_date__month=month,
+        )
+
+        summary = reports.aggregate(
+            total=Count("id"),
+
+            pending=Count("id", filter=Q(status=SessionReport.Status.PENDING)),
+
+            approved=Count("id", filter=Q(status=SessionReport.Status.APPROVED)),
+
+            rejected=Count("id", filter=Q(status=SessionReport.Status.REJECTED)),
+        )
+
+        return Response({
+            "year": int(year),
+            "month": int(month),
+            **summary,
+        })

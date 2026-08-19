@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.test import APIRequestFactory
+from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
 from apps.education.models import School, Term, Classroom, TeacherAssignment
@@ -1285,4 +1286,121 @@ class SessionReportTest(TestCase):
         self.assertEqual(
             report.submitted_at,
             original_submitted_at,
+        )
+
+    def test_teacher_monthly_summary(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.make_aware(
+                timezone.datetime(2026, 8, 5, 10, 0)
+            ),
+            lesson_summary="Pending report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.PENDING,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.make_aware(
+                timezone.datetime(2026, 8, 10, 10, 0)
+            ),
+            lesson_summary="Approved report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.APPROVED,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=timezone.make_aware(
+                timezone.datetime(2026, 8, 15, 10, 0)
+            ),
+            lesson_summary="Rejected report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+            status=SessionReport.Status.REJECTED,
+            rejection_reason="Needs more details",
+        )
+
+        url = reverse("teacher-monthly-report-summary")
+
+        response = self.client.get(
+            url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(response.data["year"], 2026)
+        self.assertEqual(response.data["month"], 8)
+        self.assertEqual(response.data["total"], 3)
+        self.assertEqual(response.data["pending"], 1)
+        self.assertEqual(response.data["approved"], 1)
+        self.assertEqual(response.data["rejected"], 1)
+
+    def test_monthly_summary_requires_year(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        url = reverse("teacher-monthly-report-summary")
+
+        response = self.client.get(
+            url,
+            {
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_monthly_summary_requires_month(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        url = reverse("teacher-monthly-report-summary")
+
+        response = self.client.get(
+            url,
+            {
+                "year": 2026,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    def test_education_officer_cannot_access_monthly_summary(self):
+        self.client.force_authenticate(user=self.education_officer)
+
+        url = reverse("teacher-monthly-report-summary")
+
+        response = self.client.get(
+            url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )
