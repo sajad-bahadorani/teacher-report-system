@@ -16,7 +16,7 @@ class SalaryRate(models.Model):
     
     
 class Salary(models.Model):
-    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="salary")
+    teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="salaries")
     
     month = models.PositiveSmallIntegerField()
     year = models.PositiveSmallIntegerField()
