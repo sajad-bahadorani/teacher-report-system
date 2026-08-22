@@ -33,6 +33,14 @@ class SessionReport(BaseModel):
 
     rejection_reason = models.TextField(null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["teacher", "classroom", "session_date"],
+                name="unique_teacher_classroom_session_report",
+            )
+        ]
+
     def calculate_is_late(self):
         if not self.submitted_at:
             return False

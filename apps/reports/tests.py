@@ -1863,3 +1863,44 @@ class SessionReportTest(TestCase):
             str(history),
             f"{report.id} - approved",
         )
+
+    def test_teacher_cannot_create_duplicate_report_for_same_session(self):
+        session_time = timezone.now()
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom,
+            session_date=session_time,
+            lesson_summary="First report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=timezone.now(),
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": self.classroom.id,
+                "session_date": session_time.isoformat(),
+                "lesson_summary": "Duplicate report",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertEqual(
+            SessionReport.objects.filter(
+                teacher=self.teacher,
+                classroom=self.classroom,
+                session_date=session_time,
+            ).count(),
+            1,
+        )
