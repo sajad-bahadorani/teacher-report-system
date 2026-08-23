@@ -2,6 +2,8 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+
 from apps.accounts.permissions import IsFinanceOfficer
 from apps.accounts.models import User
 
@@ -11,6 +13,7 @@ from .serializers import(
     SalaryRateSerializer,
     SalaryCalculationSerializer,
     MonthlySalaryCalculationSerializer,
+    SalarySerializer,
 )  
 
 
@@ -95,4 +98,37 @@ class AllTeachersMonthlySalaryCalculateView(APIView):
             })
 
         return Response(results)
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            name="year",
+            type=int,
+            location=OpenApiParameter.QUERY,
+        ),
+        OpenApiParameter(
+            name="month",
+            type=int,
+            location=OpenApiParameter.QUERY,
+        ),
+    ]
+)
+
+class MonthlySalaryListView(generics.ListAPIView):
+    serializer_class = SalarySerializer
+    permission_classes = [IsFinanceOfficer]
+
+    def get_queryset(self):
+        year = self.request.query_params.get("year")
+        month = self.request.query_params.get("month")
+
+        queryset = Salary.objects.all()
+
+        if year:
+            queryset = queryset.filter(year=year)
+
+        if month:
+            queryset = queryset.filter(month=month)
+
+        return queryset
 

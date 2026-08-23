@@ -36,7 +36,7 @@ class SalaryCalculationSerializer(serializers.Serializer):
     teacher = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=User.Role.TEACHER))
     year = serializers.IntegerField(min_value=1)
     month = serializers.IntegerField(min_value=1, max_value=12)
-    
+
 
 class MonthlySalaryCalculationSerializer(serializers.Serializer):
     year = serializers.IntegerField(min_value=1)
@@ -44,3 +44,20 @@ class MonthlySalaryCalculationSerializer(serializers.Serializer):
         min_value=1,
         max_value=12,
     )
+
+class SalarySerializer(serializers.ModelSerializer):
+    teacher_name = serializers.CharField(
+        source="teacher.full_name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Salary
+        fields = [
+            "id",
+            "teacher",
+            "teacher_name",
+            "year",
+            "month",
+            "amount",
+        ]
