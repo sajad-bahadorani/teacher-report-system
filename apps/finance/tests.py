@@ -830,3 +830,105 @@ class TeacherSalaryHistoryAPITest(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+class MonthlySalaryListAPITest(APITestCase):
+
+    def setUp(self):
+        self.finance_officer = User.objects.create_user(
+            username="salary_list_finance",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09170000201",
+            emergency_phone="09170000202",
+        )
+
+        self.teacher1 = User.objects.create_user(
+            username="salary_list_teacher1",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09170000203",
+            emergency_phone="09170000204",
+        )
+
+        self.teacher2 = User.objects.create_user(
+            username="salary_list_teacher2",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09170000205",
+            emergency_phone="09170000206",
+        )
+
+        Salary.objects.create(
+            teacher=self.teacher1,
+            year=2026,
+            month=8,
+            amount=Decimal("2000000.00"),
+        )
+
+        Salary.objects.create(
+            teacher=self.teacher2,
+            year=2026,
+            month=8,
+            amount=Decimal("3000000.00"),
+        )
+
+        Salary.objects.create(
+            teacher=self.teacher1,
+            year=2026,
+            month=7,
+            amount=Decimal("1500000.00"),
+        )
+
+        self.url = reverse("monthly-salary-list")
+
+    def test_finance_officer_can_view_monthly_salary_list(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.get(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
+
+        self.assertEqual(
+            response.data[0]["year"],
+            2026,
+        )
+
+        self.assertEqual(
+            response.data[0]["month"],
+            8,
+        )
+
+    def test_teacher_cannot_view_monthly_salary_list(self):
+        self.client.force_authenticate(
+            user=self.teacher1
+        )
+
+        response = self.client.get(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
