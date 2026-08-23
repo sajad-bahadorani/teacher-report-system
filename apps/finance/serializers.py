@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 
-from .models import SalaryRate
+from .models import SalaryRate, Salary
 
 
 class SalaryRateSerializer(serializers.ModelSerializer):
@@ -30,3 +30,10 @@ class SalaryRateSerializer(serializers.ModelSerializer):
             )
 
         return base_rate
+
+
+class SalaryCalculationSerializer(serializers.Serializer):
+    teacher = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role=User.Role.TEACHER))
+    year = serializers.IntegerField(min_value=1)
+    month = serializers.IntegerField(min_value=1, max_value=12)
+    
