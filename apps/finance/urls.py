@@ -5,6 +5,7 @@ from .views import (
     TeacherSalaryCalculateView,
     AllTeachersMonthlySalaryCalculateView,
     MonthlySalaryListView,
+    TeacherSalaryHistoryView
 )
 
 
@@ -13,5 +14,5 @@ urlpatterns = [
     path("calculate/", TeacherSalaryCalculateView.as_view(), name="teacher-salary-calculate"),
     path("calculate-all/", AllTeachersMonthlySalaryCalculateView.as_view(), name="all-teachers-monthly-salary-calculate"),
     path("salaries/", MonthlySalaryListView.as_view(), name="monthly-salary-list"),
-
+    path("my-salaries/", TeacherSalaryHistoryView.as_view(), name="teacher-salary-history"),
 ]

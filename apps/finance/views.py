@@ -4,7 +4,7 @@ from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from apps.accounts.permissions import IsFinanceOfficer
+from apps.accounts.permissions import IsFinanceOfficer, IsTeacher
 from apps.accounts.models import User
 
 from .calculations import calculate_teacher_monthly_salary
@@ -131,4 +131,14 @@ class MonthlySalaryListView(generics.ListAPIView):
             queryset = queryset.filter(month=month)
 
         return queryset
+
+
+class TeacherSalaryHistoryView(generics.ListAPIView):
+    serializer_class = SalarySerializer
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self):
+        return Salary.objects.filter(
+            teacher=self.request.user
+        ).order_by("-year", "-month")
 
