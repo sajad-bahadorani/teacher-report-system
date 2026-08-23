@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from apps.accounts.permissions import IsFinanceOfficer
+from apps.accounts.models import User
 
 from .calculations import calculate_teacher_monthly_salary
 from .models import SalaryRate, Salary

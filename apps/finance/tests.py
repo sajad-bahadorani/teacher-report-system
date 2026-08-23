@@ -537,3 +537,186 @@ class TeacherSalaryCalculateAPITest(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
+
+class AllTeachersMonthlySalaryCalculateAPITest(APITestCase):
+
+    def setUp(self):
+        self.finance_officer = User.objects.create_user(
+            username="all_salary_finance",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09171111111",
+            emergency_phone="09172222222",
+        )
+
+        self.teacher1 = User.objects.create_user(
+            username="all_salary_teacher_1",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09173333333",
+            emergency_phone="09174444444",
+        )
+
+        self.teacher2 = User.objects.create_user(
+            username="all_salary_teacher_2",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09175555555",
+            emergency_phone="09176666666",
+        )
+
+        self.school = School.objects.create(
+            name="All Salary School"
+        )
+
+        self.term = Term.objects.create(
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        self.classroom1 = Classroom.objects.create(
+            name="Teacher 1 Class",
+            school=self.school,
+            term=self.term,
+            session_duration=90,
+        )
+
+        self.classroom2 = Classroom.objects.create(
+            name="Teacher 2 Class",
+            school=self.school,
+            term=self.term,
+            session_duration=60,
+        )
+
+        SalaryRate.objects.create(
+            teacher=self.teacher1,
+            term=self.term,
+            base_rate=Decimal("200000.00"),
+        )
+
+        SalaryRate.objects.create(
+            teacher=self.teacher2,
+            term=self.term,
+            base_rate=Decimal("300000.00"),
+        )
+
+        session_time = timezone.make_aware(
+            timezone.datetime(2026, 8, 10, 10, 0)
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher1,
+            classroom=self.classroom1,
+            session_date=session_time,
+            lesson_summary="Teacher 1 report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=session_time + timedelta(hours=1),
+            status=SessionReport.Status.APPROVED,
+            is_late=False,
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher2,
+            classroom=self.classroom2,
+            session_date=session_time,
+            lesson_summary="Teacher 2 report",
+            present_count=8,
+            absent_count=1,
+            submitted_at=session_time + timedelta(hours=1),
+            status=SessionReport.Status.APPROVED,
+            is_late=False,
+        )
+
+        self.url = reverse(
+            "all-teachers-monthly-salary-calculate"
+        )
+
+    def test_finance_officer_can_calculate_all_teachers_salary(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            Salary.objects.filter(
+                year=2026,
+                month=8,
+            ).count(),
+            2,
+        )
+
+        salary1 = Salary.objects.get(
+            teacher=self.teacher1,
+            year=2026,
+            month=8,
+        )
+
+        salary2 = Salary.objects.get(
+            teacher=self.teacher2,
+            year=2026,
+            month=8,
+        )
+
+        self.assertEqual(
+            salary1.amount,
+            Decimal("200000.00"),
+        )
+
+        self.assertEqual(
+            salary2.amount,
+            Decimal("210000.00"),
+        )
+
+    def test_teacher_cannot_calculate_all_teachers_salary(self):
+        self.client.force_authenticate(
+            user=self.teacher1
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_calculate_all_rejects_invalid_month(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "year": 2026,
+                "month": 13,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
