@@ -720,3 +720,113 @@ class AllTeachersMonthlySalaryCalculateAPITest(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
+
+class TeacherSalaryHistoryAPITest(APITestCase):
+
+    def setUp(self):
+        self.teacher = User.objects.create_user(
+            username="history_salary_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09170000101",
+            emergency_phone="09170000102",
+        )
+
+        self.other_teacher = User.objects.create_user(
+            username="history_salary_other_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09170000103",
+            emergency_phone="09170000104",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="history_salary_finance",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09170000105",
+            emergency_phone="09170000106",
+        )
+
+        self.education_officer = User.objects.create_user(
+            username="history_salary_education",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09170000107",
+            emergency_phone="09170000108",
+        )
+
+        Salary.objects.create(
+            teacher=self.teacher,
+            year=2026,
+            month=7,
+            amount=Decimal("2000000.00"),
+        )
+
+        Salary.objects.create(
+            teacher=self.teacher,
+            year=2026,
+            month=8,
+            amount=Decimal("2540000.00"),
+        )
+
+        Salary.objects.create(
+            teacher=self.other_teacher,
+            year=2026,
+            month=8,
+            amount=Decimal("3000000.00"),
+        )
+
+        self.url = reverse("teacher-salary-history")
+
+    def test_teacher_can_view_only_own_salary_history(self):
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            len(response.data),
+            2,
+        )
+
+        self.assertEqual(
+            response.data[0]["teacher"],
+            self.teacher.id,
+        )
+
+        self.assertEqual(
+            response.data[1]["teacher"],
+            self.teacher.id,
+        )
+
+    def test_finance_officer_cannot_access_teacher_salary_history(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_education_officer_cannot_access_teacher_salary_history(self):
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
