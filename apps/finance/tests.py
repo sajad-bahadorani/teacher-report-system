@@ -316,3 +316,62 @@ class SalaryCalculationTest(TestCase):
             wage,
             Decimal("2540000.00"),
         )
+
+    def test_salary_is_zero_when_teacher_has_no_approved_reports(self):
+        wage = calculate_teacher_monthly_salary(
+            self.teacher,
+            2026,
+            8,
+        )
+
+        self.assertEqual(
+            wage,
+            Decimal("0.00"),
+        )
+
+    def test_summer_term_salary_has_ten_percent_bonus(self):
+        summer_term = Term.objects.create(
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+            term_type=Term.TermType.SUMMER,
+        )
+
+        summer_classroom = Classroom.objects.create(
+            name="Summer Class",
+            school=self.school,
+            term=summer_term,
+            session_duration=90,
+        )
+
+        SalaryRate.objects.create(
+            teacher=self.teacher,
+            term=summer_term,
+            base_rate=Decimal("200000.00"),
+        )
+
+        session_time = timezone.make_aware(
+            timezone.datetime(2026, 8, 10, 10, 0)
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=summer_classroom,
+            session_date=session_time,
+            lesson_summary="Summer session",
+            present_count=10,
+            absent_count=2,
+            submitted_at=session_time + timedelta(hours=1),
+            status=SessionReport.Status.APPROVED,
+            is_late=False,
+        )
+
+        wage = calculate_teacher_monthly_salary(
+            self.teacher,
+            2026,
+            8,
+        )
+
+        self.assertEqual(
+            wage,
+            Decimal("220000.00"),
+        )
