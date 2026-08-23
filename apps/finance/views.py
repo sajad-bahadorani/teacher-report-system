@@ -6,7 +6,11 @@ from apps.accounts.permissions import IsFinanceOfficer
 
 from .calculations import calculate_teacher_monthly_salary
 from .models import SalaryRate, Salary
-from .serializers import SalaryRateSerializer, SalaryCalculationSerializer
+from .serializers import(
+    SalaryRateSerializer,
+    SalaryCalculationSerializer,
+    MonthlySalaryCalculationSerializer,
+)  
 
 
 class SalaryRateListCreateView(generics.ListCreateAPIView):
@@ -43,4 +47,51 @@ class TeacherSalaryCalculateView(APIView):
             "month": month,
             "amount": salary.amount,
         })
+
+
+class AllTeachersMonthlySalaryCalculateView(APIView):
+    permission_classes = [IsFinanceOfficer]
+
+    def post(self, request):
+        serializer = MonthlySalaryCalculationSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        year = serializer.validated_data["year"]
+        month = serializer.validated_data["month"]
+
+        teachers = User.objects.filter(
+            role=User.Role.TEACHER
+        )
+
+        results = []
+
+        for teacher in teachers:
+            amount = calculate_teacher_monthly_salary(
+                teacher,
+                year,
+                month,
+            )
+
+            salary, created = Salary.objects.update_or_create(
+                teacher=teacher,
+                year=year,
+                month=month,
+                defaults={
+                    "amount": amount,
+                },
+            )
+
+            results.append({
+                "teacher": teacher.id,
+                "year": year,
+                "month": month,
+                "amount": salary.amount,
+            })
+
+        return Response(results)
 
