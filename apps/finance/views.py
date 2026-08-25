@@ -26,6 +26,10 @@ class SalaryRateListCreateView(generics.ListCreateAPIView):
 class TeacherSalaryCalculateView(APIView):
     permission_classes = [IsFinanceOfficer]
 
+    @extend_schema(
+        request=SalaryCalculationSerializer,
+    )
+
     def post(self, request):
         serializer = SalaryCalculationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -55,6 +59,10 @@ class TeacherSalaryCalculateView(APIView):
 
 class AllTeachersMonthlySalaryCalculateView(APIView):
     permission_classes = [IsFinanceOfficer]
+
+    @extend_schema(
+        request=MonthlySalaryCalculationSerializer,
+    )
 
     def post(self, request):
         serializer = MonthlySalaryCalculationSerializer(

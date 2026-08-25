@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from rest_framework.exceptions import ValidationError
+
 from apps.reports.models import SessionReport
 
 from .models import SalaryRate
@@ -19,7 +21,11 @@ def calculate_teacher_monthly_salary(teacher, year, month):
     for report in reports:
         term = report.classroom.term
 
-        salary_rate = SalaryRate.objects.get(teacher=teacher, term=term)
+        salary_rate = SalaryRate.objects.filter(teacher=teacher, term=term).first()
+        if not salary_rate:
+            raise ValidationError(
+                f"Salary rate is not defined for teacher {teacher.id} in term {term.id}."
+            )
 
         base_rate = salary_rate.base_rate
         duration = report.classroom.session_duration
