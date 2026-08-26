@@ -4,6 +4,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError, PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -219,6 +220,7 @@ class GroupApproveView(APIView):
 
 class SessionReportHistoryView(generics.ListAPIView):
     serializer_class = SessionReportStatusHistorySerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         report_id = self.kwargs["pk"]

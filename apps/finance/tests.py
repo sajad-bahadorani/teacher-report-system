@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
@@ -328,6 +329,30 @@ class SalaryCalculationTest(TestCase):
             wage,
             Decimal("0.00"),
         )
+
+    def test_salary_cannot_be_calculated_with_pending_reports(self):
+        session_time = timezone.make_aware(
+            timezone.datetime(2026, 8, 10, 10, 0)
+        )
+
+        SessionReport.objects.create(
+            teacher=self.teacher,
+            classroom=self.classroom_90,
+            session_date=session_time,
+            lesson_summary="Pending report",
+            present_count=10,
+            absent_count=2,
+            submitted_at=session_time + timedelta(hours=1),
+            status=SessionReport.Status.PENDING,
+            is_late=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            calculate_teacher_monthly_salary(
+                self.teacher,
+                2026,
+                8,
+            )
 
     def test_summer_term_salary_has_ten_percent_bonus(self):
         summer_term = Term.objects.create(

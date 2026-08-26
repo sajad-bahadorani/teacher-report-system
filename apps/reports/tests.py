@@ -1868,3 +1868,25 @@ class SessionReportTest(TestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+    def test_teacher_cannot_create_report_for_future_session(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        future_session = timezone.now() + timedelta(hours=1)
+
+        response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": self.classroom.id,
+                "session_date": future_session.isoformat(),
+                "lesson_summary": "Future session report",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )

@@ -27,6 +27,10 @@ class SessionReportSerializer(serializers.ModelSerializer):
         classroom = attrs.get("classroom", getattr(self.instance, "classroom", None))
 
         session_date = attrs.get("session_date", getattr(self.instance, "session_date", None))
+        if session_date and session_date > timezone.now():
+            raise serializers.ValidationError({
+                "session_date": "You cannot submit a report for a future session."
+            })
 
         assignment_exists = TeacherAssignment.objects.filter(
             teacher=teacher,

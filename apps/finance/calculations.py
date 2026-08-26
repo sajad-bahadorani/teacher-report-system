@@ -8,6 +8,19 @@ from .models import SalaryRate
 
 
 def calculate_teacher_monthly_salary(teacher, year, month):
+    unreviewed_reports = SessionReport.objects.filter(
+        teacher=teacher,
+        session_date__year=year,
+        session_date__month=month,
+    ).exclude(
+        status=SessionReport.Status.APPROVED
+    )
+
+    if unreviewed_reports.exists():
+        raise ValidationError(
+            "All reports for this month must be approved before salary calculation."
+        )
+    
     reports = SessionReport.objects.filter(
         teacher=teacher,
         session_date__year=year,

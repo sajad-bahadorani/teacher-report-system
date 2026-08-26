@@ -784,6 +784,28 @@ class TermAPITest(APITestCase):
             "2026-01-01 - 2026-03-31",
         )
 
+    def test_term_cannot_overlap_with_existing_term(self):
+        Term.objects.create(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 3, 31),
+            term_type=Term.TermType.NORMAL,
+        )
+
+        response = self.client.post(
+            reverse("term-list-create"),
+            {
+                "start_date": "2026-03-01",
+                "end_date": "2026-05-31",
+                "term_type": Term.TermType.NORMAL,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
 class ClassroomAPITest(APITestCase):
 
     def setUp(self):
