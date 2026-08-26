@@ -1,0 +1,18 @@
+from django.urls import path
+
+from .views import (
+    SalaryRateListCreateView, 
+    TeacherSalaryCalculateView,
+    AllTeachersMonthlySalaryCalculateView,
+    MonthlySalaryListView,
+    TeacherSalaryHistoryView
+)
+
+
+urlpatterns = [
+    path("rates/", SalaryRateListCreateView.as_view(), name="salary-rate-list-create"),
+    path("calculate/", TeacherSalaryCalculateView.as_view(), name="teacher-salary-calculate"),
+    path("calculate-all/", AllTeachersMonthlySalaryCalculateView.as_view(), name="all-teachers-monthly-salary-calculate"),
+    path("salaries/", MonthlySalaryListView.as_view(), name="monthly-salary-list"),
+    path("my-salaries/", TeacherSalaryHistoryView.as_view(), name="teacher-salary-history"),
+]

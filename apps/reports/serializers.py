@@ -43,8 +43,25 @@ class SessionReportSerializer(serializers.ModelSerializer):
 
         if not assignment_exists:
             raise serializers.ValidationError(
-                 "You can only create reports for your own classroom."
+                "You can only create reports for your own classroom."
             )
+
+        duplicate_reports = SessionReport.objects.filter(
+            teacher=teacher,
+            classroom=classroom,
+            session_date=session_date,
+        )
+
+        if self.instance:
+            duplicate_reports = duplicate_reports.exclude(
+                pk=self.instance.pk
+            )
+
+        if duplicate_reports.exists():
+            raise serializers.ValidationError(
+                "A report for this session already exists."
+            )
+
         return attrs
 
     def create(self, validated_data):

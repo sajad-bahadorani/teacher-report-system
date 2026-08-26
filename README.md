@@ -81,6 +81,21 @@ python manage.py create_user \
   --phone_number 09123456789 \
   --emergency_phone 09987654321
 ```
+### Demo Users
+
+For a fresh database, sample users for all three roles can be created with:
+
+```bash
+python manage.py seed_users
+```
+
+This command creates sample users for:
+
+- Teacher
+- Education Officer
+- Finance Officer
+
+
 
 - API documentation
   - OpenAPI schema
@@ -94,10 +109,6 @@ POST /api/accounts/refresh/
 
 GET /api/accounts/me/
 
-GET /api/accounts/teacher/
-GET /api/accounts/education/
-GET /api/accounts/finance/
-```
 
 ### Tests
 
@@ -171,6 +182,7 @@ Run all project tests:
 
 ```bash
 python manage.py test
+```
 
 
 ## Phase 3 - Session Report Workflow
@@ -266,7 +278,7 @@ In Phase 3, the session reporting workflow was implemented.
 GET  /api/reports/
 POST /api/reports/
 
-GET   /api/reports/{id}/
+
 PATCH /api/reports/{id}/
 
 GET /api/reports/education/
@@ -278,3 +290,117 @@ GET /api/reports/monthly-summary/
 POST /api/reports/group-approve/
 
 GET /api/reports/{id}/history/
+
+
+## Phase 4 - Salary Calculation
+
+In Phase 4, the salary calculation system was implemented based on approved and non-late session reports.
+
+### Features
+
+- Salary rate management
+  - Finance Officers can define a base salary rate for each teacher and term
+  - The base rate is based on a 90-minute session
+  - Each teacher can have only one salary rate per term
+
+- Monthly salary calculation
+  - Finance Officers can calculate salary for a specific teacher and month
+  - Only approved and non-late session reports are included
+  - 60-minute sessions use 70% of the base rate
+  - 90-minute sessions use 100% of the base rate
+  - 120-minute sessions use 130% of the base rate
+  - Summer term sessions receive a 10% increase
+
+- All teachers salary calculation
+  - Finance Officers can calculate salaries for all teachers for a specific month
+
+- Monthly salary list
+  - Finance Officers can view calculated salaries for a specific year and month
+
+- Teacher salary history
+  - Teachers can view only their own salary history
+  - Teachers cannot view another teacher's salary history
+
+- Salary records
+  - Only one salary record is stored for each teacher, year, and month
+  - Recalculating a salary updates the existing record
+
+
+### API Endpoints
+
+```text
+GET  /api/finance/rates/
+POST /api/finance/rates/
+
+POST /api/finance/calculate/
+POST /api/finance/calculate-all/
+
+GET  /api/finance/salaries/?year=2026&month=8
+GET  /api/finance/my-salaries/
+```
+
+### Tests
+
+Phase 4 includes tests for:
+
+- Salary rate creation and validation
+- Role-based access to salary operations
+- Salary calculation for 60, 90, and 120-minute sessions
+- Exclusion of late and unapproved reports
+- Summer term 10% increase
+- Salary calculation for a teacher with no approved reports
+- Monthly salary calculation for all teachers
+- Monthly salary list
+- Teacher salary history
+- Complete end-to-end system flow
+
+
+## Project Setup
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a `.env` file in the project root:
+
+```env
+DB_NAME=teacher_report_db
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+SECRET_KEY=your_secret_key
+```
+
+Apply database migrations:
+
+```bash
+python manage.py migrate
+```
+
+Create demo users:
+
+```bash
+python manage.py seed_users
+```
+
+Run the development server:
+
+```bash
+python manage.py runserver
+```
+
+Run all tests:
+
+```bash
+python manage.py test
+```
