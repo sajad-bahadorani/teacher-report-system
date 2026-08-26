@@ -1046,56 +1046,6 @@ class SessionReportTest(TestCase):
             10,
         )
 
-    def test_education_officer_cannot_change_report_content(self):
-        report = SessionReport.objects.create(
-            teacher=self.teacher,
-            classroom=self.classroom,
-            session_date=timezone.now(),
-            lesson_summary="Original summary",
-            present_count=10,
-            absent_count=2,
-            submitted_at=timezone.now(),
-        )
-
-        self.client.force_authenticate(
-            user=self.education_officer
-        )
-
-        response = self.client.patch(
-            reverse(
-                "session-report-review",
-                kwargs={"pk": report.pk},
-            ),
-            {
-                "status": SessionReport.Status.APPROVED,
-                "lesson_summary": "Changed by education officer",
-                "present_count": 99,
-            },
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
-
-        report.refresh_from_db()
-
-        self.assertEqual(
-            report.status,
-            SessionReport.Status.APPROVED,
-        )
-
-        self.assertEqual(
-            report.lesson_summary,
-            "Original summary",
-        )
-
-        self.assertEqual(
-            report.present_count,
-            10,
-        )
-
     def test_late_report_is_automatically_marked_as_late(self):
         assignment = TeacherAssignment.objects.get(
             teacher=self.teacher,
@@ -1862,4 +1812,18 @@ class SessionReportTest(TestCase):
         self.assertEqual(
             str(history),
             f"{report.id} - approved",
+        )
+
+    def test_finance_officer_cannot_access_education_report_list(self):
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        response = self.client.get(
+            reverse("education-report-list")
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
         )

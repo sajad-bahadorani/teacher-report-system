@@ -721,6 +721,35 @@ class AllTeachersMonthlySalaryCalculateAPITest(APITestCase):
             status.HTTP_400_BAD_REQUEST,
         )
 
+    def test_education_officer_cannot_calculate_all_teachers_salary(self):
+        education_officer = User.objects.create_user(
+            username="all_salary_education",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09177777771",
+            emergency_phone="09177777772",
+        )
+
+        self.client.force_authenticate(
+            user=education_officer
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+
+
 
 class TeacherSalaryHistoryAPITest(APITestCase):
 
@@ -918,6 +947,32 @@ class MonthlySalaryListAPITest(APITestCase):
     def test_teacher_cannot_view_monthly_salary_list(self):
         self.client.force_authenticate(
             user=self.teacher1
+        )
+
+        response = self.client.get(
+            self.url,
+            {
+                "year": 2026,
+                "month": 8,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_education_officer_cannot_view_monthly_salary_list(self):
+        education_officer = User.objects.create_user(
+            username="salary_list_education",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09170000207",
+            emergency_phone="09170000208",
+        )
+
+        self.client.force_authenticate(
+            user=education_officer
         )
 
         response = self.client.get(
