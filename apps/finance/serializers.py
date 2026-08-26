@@ -61,3 +61,4 @@ class SalarySerializer(serializers.ModelSerializer):
             "month",
             "amount",
         ]
+        read_only_fields = fields

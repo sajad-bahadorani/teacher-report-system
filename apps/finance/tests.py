@@ -987,3 +987,212 @@ class MonthlySalaryListAPITest(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+class FullSystemFlowTest(APITestCase):
+
+    def setUp(self):
+        self.teacher = User.objects.create_user(
+            username="full_flow_teacher",
+            password="1234",
+            role=User.Role.TEACHER,
+            phone_number="09180000001",
+            emergency_phone="09180000002",
+        )
+
+        self.education_officer = User.objects.create_user(
+            username="full_flow_education",
+            password="1234",
+            role=User.Role.EDUCATION_OFFICER,
+            phone_number="09180000003",
+            emergency_phone="09180000004",
+        )
+
+        self.finance_officer = User.objects.create_user(
+            username="full_flow_finance",
+            password="1234",
+            role=User.Role.FINANCE_OFFICER,
+            phone_number="09180000005",
+            emergency_phone="09180000006",
+        )
+
+    def test_complete_system_flow(self):
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        # 1. Education officer creates a school
+        school_response = self.client.post(
+            reverse("school-list-create"),
+            {
+                "name": "Full Flow School",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            school_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        school_id = school_response.data["id"]
+
+        # 2. Education officer creates a term
+        term_response = self.client.post(
+            reverse("term-list-create"),
+            {
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-31",
+                "term_type": Term.TermType.NORMAL,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            term_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        term_id = term_response.data["id"]
+
+        # 3. Education officer creates a classroom
+        classroom_response = self.client.post(
+            reverse("classroom-list-create"),
+            {
+                "name": "Full Flow Class",
+                "school": school_id,
+                "term": term_id,
+                "session_duration": 90,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            classroom_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        classroom_id = classroom_response.data["id"]
+
+        # 4. Education officer assigns teacher to classroom
+        assignment_response = self.client.post(
+            reverse("teacher-assignment-list-create"),
+            {
+                "teacher": self.teacher.id,
+                "classroom": classroom_id,
+                "start_date": "2026-08-01",
+                "end_date": "2026-08-31",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            assignment_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        # 5. Teacher creates a session report
+        self.client.force_authenticate(
+            user=self.teacher
+        )
+
+        session_time = timezone.now() - timedelta(hours=1)
+
+        report_response = self.client.post(
+            reverse("session-report-list-create"),
+            {
+                "classroom": classroom_id,
+                "session_date": session_time.isoformat(),
+                "lesson_summary": "Full flow lesson",
+                "present_count": 10,
+                "absent_count": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            report_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        report_id = report_response.data["id"]
+
+        # 6. Education officer approves the report
+        self.client.force_authenticate(
+            user=self.education_officer
+        )
+
+        review_response = self.client.patch(
+            reverse(
+                "session-report-review",
+                kwargs={"pk": report_id},
+            ),
+            {
+                "status": SessionReport.Status.APPROVED,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            review_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        report = SessionReport.objects.get(pk=report_id)
+
+        self.assertEqual(
+            report.status,
+            SessionReport.Status.APPROVED,
+        )
+
+        # 7. Finance officer sets salary rate
+        self.client.force_authenticate(
+            user=self.finance_officer
+        )
+
+        salary_rate_response = self.client.post(
+            reverse("salary-rate-list-create"),
+            {
+                "teacher": self.teacher.id,
+                "term": term_id,
+                "base_rate": "200000.00",
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            salary_rate_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+
+        # 8. Finance officer calculates teacher salary
+        salary_response = self.client.post(
+            reverse("teacher-salary-calculate"),
+            {
+                "teacher": self.teacher.id,
+                "year": session_time.year,
+                "month": session_time.month,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            salary_response.status_code,
+            status.HTTP_200_OK,
+        )
+
+        self.assertEqual(
+            Decimal(str(salary_response.data["amount"])),
+            Decimal("200000.00"),
+        )
+
+        salary = Salary.objects.get(
+            teacher=self.teacher,
+            year=session_time.year,
+            month=session_time.month,
+        )
+
+        self.assertEqual(
+            salary.amount,
+            Decimal("200000.00"),
+        )

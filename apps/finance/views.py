@@ -1,4 +1,5 @@
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -40,7 +41,7 @@ class TeacherSalaryCalculateView(APIView):
 
         amount = calculate_teacher_monthly_salary(teacher, year, month)
 
-        salary, created = Salary.objects.update_or_create(
+        salary, _ = Salary.objects.update_or_create(
             teacher=teacher,
             year=year,
             month=month,
@@ -89,7 +90,7 @@ class AllTeachersMonthlySalaryCalculateView(APIView):
                 month,
             )
 
-            salary, created = Salary.objects.update_or_create(
+            salary, _ = Salary.objects.update_or_create(
                 teacher=teacher,
                 year=year,
                 month=month,
@@ -113,11 +114,13 @@ class AllTeachersMonthlySalaryCalculateView(APIView):
             name="year",
             type=int,
             location=OpenApiParameter.QUERY,
+            required=True,
         ),
         OpenApiParameter(
             name="month",
             type=int,
             location=OpenApiParameter.QUERY,
+            required=True,
         ),
     ]
 )
@@ -130,15 +133,10 @@ class MonthlySalaryListView(generics.ListAPIView):
         year = self.request.query_params.get("year")
         month = self.request.query_params.get("month")
 
-        queryset = Salary.objects.all()
+        if not year or not month:
+            raise ValidationError("year and month are required.")
 
-        if year:
-            queryset = queryset.filter(year=year)
-
-        if month:
-            queryset = queryset.filter(month=month)
-
-        return queryset
+        return Salary.objects.filter(year=year, month=month)
 
 
 class TeacherSalaryHistoryView(generics.ListAPIView):
